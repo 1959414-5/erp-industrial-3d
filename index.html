@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ERP Industrial Analytics 3D</title></head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="ui">
+    <header><div class="brand"><span class="logo">▲</span><div><b>Gestão Industrial</b><small>ERP Analytics</small></div></div><nav id="tabs"></nav><div class="hright"><button id="movebtn" aria-pressed="false" title="Mover painéis (arrastar)" aria-label="Mover painéis">✥</button><button id="aibtn" aria-expanded="false" title="Perguntar à IA sobre os dados">✨ Assistente IA</button><span class="badge">dados de exemplo</span></div></header>
+    <aside id="left" class="glass"></aside>
+    <aside id="right" class="glass"></aside>
+    <section id="bottom" class="glass"></section>
+    <div id="tip" class="glass"></div>
+    <div id="card" class="glass"></div>
+    <div id="wallctl" class="glass">
+      <span>Paredes</span>
+      <button data-wall="cutaway" class="on">Corte</button>
+      <button data-wall="high">Altas</button>
+      <button data-wall="low">Baixas</button>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body></html>
