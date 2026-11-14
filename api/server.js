@@ -17,11 +17,17 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 5,
   dateStrings: true,
+  // bancos em nuvem (TiDB Cloud, PlanetScale, Aiven...) exigem TLS: defina DB_SSL=true
+  ...(/^(1|true|yes)$/i.test(process.env.DB_SSL || '') ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {}),
 });
 
 const app = express();
 // CORS: por padrão libera qualquer origem (dev). Em produção defina CORS_ORIGIN=https://seu-usuario.github.io
 app.use(cors(process.env.CORS_ORIGIN ? { origin: process.env.CORS_ORIGIN.split(',').map((x) => x.trim()) } : undefined));
+
+// resposta imediata, sem tocar no banco: serve para "acordar" o serviço (Render grátis) e para monitor de uptime
+app.get('/', (_req, res) => res.json({ ok: true, service: 'erp-industrial-3d-api' }));
+app.get('/api/ping', (_req, res) => res.json({ ok: true }));
 
 // saúde da API e do banco
 app.get('/api/health', async (_req, res) => {
