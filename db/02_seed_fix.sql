@@ -40,7 +40,7 @@ INSERT INTO pedidos_venda
 SELECT CONCAT('SEED-PV-', LPAD(c.rn, 4, '0')),
        c.id_cliente,
        (MOD(c.rn, 6) + 1),
-       NOW() - INTERVAL (c.rn * 3) DAY,
+       NOW() - INTERVAL ROUND(c.rn * 3) DAY,
        NOW() + INTERVAL 7 DAY,
        ELT(1 + MOD(c.rn, 4), 'PENDENTE','FATURADO','ENTREGUE','APROVADO'),
        NOW()
