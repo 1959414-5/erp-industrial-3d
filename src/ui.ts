@@ -98,7 +98,7 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     place(x: number, y: number, visible: boolean) {
       if (card.style.display !== 'block') return;
       card.style.visibility = visible ? 'visible' : 'hidden';
-      card.style.left = Math.min(Math.max(x, 150), innerWidth - 150) + 'px'; card.style.top = Math.max(y - 12, card.offsetHeight + 12) + 'px';
+      card.style.left = Math.min(Math.max(x, 125), innerWidth - 125) + 'px'; card.style.top = Math.max(y - 12, card.offsetHeight + 12) + 'px';
     },
   };
 }

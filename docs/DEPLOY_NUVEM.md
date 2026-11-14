@@ -19,6 +19,13 @@ No TiDB Cloud: cluster → **Connect** → gere a senha e copie host, porta (400
 ```powershell
 & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h HOST -P 4000 -u USUARIO -p --ssl-mode=VERIFY_IDENTITY --default-character-set=utf8mb4 -e "source dump_nuvem.sql"
 ```
+### 2b. Dados variados para a demonstração (opcional, recomendado)
+Com o banco já no TiDB, rode o script 04 na pasta do projeto (cria cenários de máquinas paradas/com falha, vendedores abaixo da meta, lotes críticos):
+```powershell
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h HOST -P 4000 -u USUARIO -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source db/04_dados_variados.sql"
+```
+Pode rodar mais de uma vez: os ajustes só são aplicados uma vez (tabela `seed_log`).
+
 ## 3. API no Render (New → Web Service → repositório do GitHub)
 Root Directory `api` · Build `npm install` · Start `npm start` · Instance Type **Free**.
 Variáveis: `DB_HOST`, `DB_PORT=4000`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=erp_industrial_analytics`, `DB_SSL=true`,

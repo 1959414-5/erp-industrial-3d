@@ -24,6 +24,11 @@ No MySQL Workbench, abra `db/01_seed_portfolio.sql` e execute o script inteiro.
 Ele cria a tabela `vendedores`, liga aos pedidos, cadastra 12 tipos de chapa,
 gera o saldo de estoque e distribui pedidos entre os vendedores.
 
+Depois rode, na ordem, `db/02_seed_fix.sql`, `db/03_seed_empresa_media.sql` (empresa de médio porte: 10 vendedores,
+38 chapas, 15 máquinas, ~160 pedidos) e **`db/04_dados_variados.sql`**, que cria cenários variados para a demonstração:
+máquinas operando, paradas e com falha; vendedores de 36% a 165% da meta; lotes cheios, equilibrados, abaixo do mínimo e
+sem estoque. O 04 é idempotente — pode rodar de novo sem duplicar nada.
+
 ## Passo 2 — Subir a API
 ```powershell
 cd api
