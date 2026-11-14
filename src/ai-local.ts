@@ -171,7 +171,7 @@ export function smartSuggestions(d: Dataset, ctx: AiContext, asked: string[] = [
   const out: string[] = [], seen = new Set(asked.map(norm));
   const add = (q: string) => { const k = norm(q); if (!seen.has(k)) { seen.add(k); out.push(q); } };
   const nameOf = (a: AiAction) => { if (a.type !== 'focus') return ''; const i = resolveRef(d, a.kind, a.ref); return i < 0 ? '' : a.kind === 'machine' ? d.machines[i].name : a.kind === 'seller' ? d.sellers[i].name : d.lots[i].id; };
-  if (ctx.selected) { const s = ctx.selected, nm = s.kind === 'machine' ? d.machines[s.index]?.name : s.kind === 'seller' ? d.sellers[s.index]?.name : d.lots[s.index]?.id; if (nm) add(s.kind === 'lot' ? `Preciso repor o lote ${nm}?` : `Como está ${s.kind === 'seller' ? first(nm) : nm}?`); }
+  if (ctx.selected) { const s = ctx.selected, nm = s.kind === 'machine' ? d.machines[s.index]?.name : s.kind === 'seller' ? d.sellers[s.index]?.name : d.lots[s.index]?.id; if (nm) add(s.kind === 'lot' ? `Preciso repor o lote ${nm}?` : (s.kind === 'seller' ? `Como está o desempenho de ${nm}?` : `Como está a máquina ${nm}?`)); }
   const f = (last?.actions ?? []).filter((a): a is Extract<AiAction, { type: 'focus' }> => a.type === 'focus');
   const ms = f.filter((a) => a.kind === 'machine'), ss = f.filter((a) => a.kind === 'seller');
   if (ms.length >= 2) add(`Compare ${nameOf(ms[0])} e ${nameOf(ms[1])}`);
@@ -179,7 +179,7 @@ export function smartSuggestions(d: Dataset, ctx: AiContext, asked: string[] = [
   for (const i of buildInsights(d)) {
     if (i.severity === 'good') continue;
     const a = i.action;
-    if (a?.type === 'focus') { const n = nameOf(a); if (a.kind === 'lot') add('Sugira uma reposição'); else if (n) add(`Como está ${a.kind === 'seller' ? first(n) : n}?`); }
+    if (a?.type === 'focus') { const n = nameOf(a); if (a.kind === 'lot') add('Sugira uma reposição'); else if (n) add(a.kind === 'seller' ? `Como está o desempenho de ${n}?` : `Como está a máquina ${n}?`); }
     else if (a?.type === 'tab' && i.tab !== 'estoque') add(i.tab === 'comercial' ? 'Projeção de pedidos' : 'Projeção da produção');
     if (out.length >= 4) break;
   }
