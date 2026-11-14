@@ -127,7 +127,7 @@ SELECT y.id_apontamento, y.np, ROUND(y.np * y.qr), y.np - ROUND(y.np * y.qr), y.
 FROM (
   SELECT x.id_apontamento,
          ROUND(x.quantidade_produzida * t.f)                                   AS np,
-         LEAST(0.995, t.q + (MOD(x.id_apontamento, 7) - 3) * 0.006)            AS qr,
+         LEAST(0.995, t.q + (CAST(MOD(x.id_apontamento, 7) AS SIGNED) - 3) * 0.006)            AS qr,
          x.data_apontamento - INTERVAL t.k DAY                                 AS nd
   FROM apontamentos_producao x
   JOIN (
