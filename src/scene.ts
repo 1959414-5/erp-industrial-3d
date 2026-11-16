@@ -12,7 +12,7 @@ import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-asset
 export type WallMode = 'cutaway' | 'high' | 'low';
 
 const TYPE_LABEL: Record<MachineType, string> = {
-  laser: 'Corte a laser', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC',
+  laser: 'Corte a laser', plasma: 'Corte a plasma', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC',
   robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita',
 };
 
@@ -316,7 +316,9 @@ export class Factory {
       const asset = await loadIndustrialAsset(key);
       if (this.machineGroups[index] !== root || !root.parent) return;
 
-      this.fitImportedModel(asset.scene, key === 'bandSaw' ? 3.5 : 4.0, key === 'bandSaw' ? 2.65 : 3.1);
+      const maxFootprint = key === 'plasmaCutter' ? 5.55 : key === 'bandSaw' ? 3.5 : 4.0;
+      const maxHeight = key === 'plasmaCutter' ? 2.9 : key === 'bandSaw' ? 2.65 : 3.1;
+      this.fitImportedModel(asset.scene, maxFootprint, maxHeight);
       root.clear();
       root.add(asset.scene);
 
@@ -417,7 +419,8 @@ export class Factory {
       this.addEditable(`machine-${i}`, model.group);
       const importedType: IndustrialAssetKey | null = ty === 'cnc' ? 'cnc'
         : ty === 'pressBrake' ? 'pressBrake'
-          : ty === 'bandSaw' ? 'bandSaw' : null;
+          : ty === 'bandSaw' ? 'bandSaw'
+            : ty === 'plasma' ? 'plasmaCutter' : null;
       if (importedType) void this.replaceMachineVisual(i, importedType);
       // operador no lado do corredor
       const opZ = back ? mz + 2.8 : mz - 2.8;
@@ -523,8 +526,17 @@ export class Factory {
   }
 
   private foot(s: Selection) {
-    if (s.kind === 'machine') { const c = this.machineGroups[s.index].position.clone(); return { c, a: 1.9, b: 1.5, anchor: c.clone().setY(3.7) }; }
-    if (s.kind === 'lot') { const c = this.lots.center(s.index); return { c, a: 1.45, b: 1.0, anchor: c.clone().setY(this.lots.top(s.index) + 0.4) }; }
+    if (s.kind === 'machine') {
+      const root = this.machineGroups[s.index];
+      const c = root.position.clone();
+      const bounds = new THREE.Box3().setFromObject(root);
+      const top = Number.isFinite(bounds.max.y) ? bounds.max.y : 3.1;
+      return { c, a: 1.9, b: 1.5, anchor: new THREE.Vector3(c.x, top + 0.42, c.z) };
+    }
+    if (s.kind === 'lot') {
+      const c = this.lots.center(s.index);
+      return { c, a: 1.45, b: 1.0, anchor: c.clone().setY(this.lots.top(s.index) + 0.4) };
+    }
     const w = new THREE.Vector3(); this.office.sellers[s.index].getWorldPosition(w);
     return { c: w.clone().add(new THREE.Vector3(0, 0, 0.45)), a: 1.2, b: 1.5, anchor: w.clone().add(new THREE.Vector3(0, 2.0, 0.95)) };
   }
@@ -561,7 +573,16 @@ export class Factory {
     this.props.forEach((p) => p.update(t));
     this.office.update(t);
     this.assetMixers.forEach((mixer) => mixer.update(dt));
-    if (this.selected) { const p = this.foot(this.selected).anchor.project(this.camera); this.onAnchor((p.x * 0.5 + 0.5) * innerWidth, (-p.y * 0.5 + 0.5) * innerHeight, p.z < 1); this.ringSel.material.opacity = 0.7 + 0.25 * Math.sin(t * 4); }
+    if (this.selected) {
+      const projected = this.foot(this.selected).anchor.clone().project(this.camera);
+      const rect = this.canvas.getBoundingClientRect();
+      const x = rect.left + (projected.x * 0.5 + 0.5) * rect.width;
+      const y = rect.top + (-projected.y * 0.5 + 0.5) * rect.height;
+      const inFront = projected.z >= -1 && projected.z <= 1;
+      const insideFrame = projected.x >= -1 && projected.x <= 1 && projected.y >= -1 && projected.y <= 1;
+      this.onAnchor(x, y, inFront && insideFrame);
+      this.ringSel.material.opacity = 0.7 + 0.25 * Math.sin(t * 4);
+    }
     this.controls.update(); this.renderer.render(this.scene, this.camera);
   }
 }
