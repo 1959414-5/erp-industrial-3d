@@ -77,8 +77,10 @@ function applyIndustrialPalette(root: THREE.Object3D) {
     });
 
     mesh.material = Array.isArray(mesh.material) ? materials : materials[0];
+    // Os GLBs são os modelos mais densos da cena: evitamos o passe de sombras
+    // sobre cada superfície importada, mantendo o sombreamento global nos demais objetos.
     mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.receiveShadow = false;
   });
 }
 
