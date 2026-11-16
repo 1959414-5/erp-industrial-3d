@@ -988,3 +988,8 @@ body.focus-mode #ai{right:16px}
   .heat{grid-template-columns:repeat(7,minmax(0,1fr));max-height:90px}
   #ai{right:7px;top:60px;bottom:7px;width:calc(100vw - 66px)}
 }
+
+/* O cartão de seleção fica ancorado ao canvas 3D, acima do objeto. */
+#card.is-below{transform:translate(-50%,0)}
+#card{max-width:min(250px,calc(100% - 16px));pointer-events:auto}
+#card h4{overflow-wrap:anywhere}
