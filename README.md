@@ -79,7 +79,7 @@ e deploy em nuvem sem custo.
 | **Seletor de modelos** | Lista provedores e modelos, mostra status e cota e permite fixar um modelo ou deixar no modo automático. |
 | **Sugestões** | Perguntas seguintes geradas pela própria IA a partir da resposta, da aba e do item selecionado. |
 | **Painéis arrastáveis** | Modo mover (botão ✥): o usuário reposiciona KPIs, gráficos e chat. A posição fica salva no navegador. |
-| **Funciona sem backend** | Sem API, o painel usa um *snapshot* estático e, em último caso, dados de exemplo embutidos. O chat cai para o motor local. |
+| **Inicialização controlada** | A fábrica 3D só é exibida depois que a API responde, `/api/health` confirma a conexão real com o MySQL e `/api/data` carrega os dados. Em falhas, a tela de conexão permanece ativa e permite tentar novamente. |
 
 ## Demonstração
 
@@ -260,10 +260,10 @@ npm run dev
 
 Abra <http://localhost:5173>. O painel busca os dados da API automaticamente.
 
-**Ordem de busca dos dados no front:** 1) API (`VITE_API_URL`); 2) `public/data.json` (snapshot estático); 3) dados de exemplo embutidos.
+**Inicialização do front:** 1) `/api/ping` confirma que a API está acessível e pode acordar o serviço no Render; 2) `/api/health` executa uma consulta no MySQL e confirma a conexão com o banco; 3) `/api/data` carrega o conjunto de dados usado pela fábrica. A interface 3D só é montada depois das três etapas. Se a API ou o banco não estiver disponível, a tela de conexão permanece ativa e permite tentar novamente. A versão publicada não libera snapshot ou dados de exemplo como se fossem dados conectados.
 Assim o painel abre mesmo sem banco.
 
-**Versão estática sem API:** `cd api && npm run snapshot` grava `public/data.json` a partir do MySQL; comente `VITE_API_URL` no `.env` e rode `npm run build`.
+**Snapshot para testes:** `cd api && npm run snapshot` continua gerando `public/data.json` a partir do MySQL para inspeção e testes locais. A aplicação publicada exige a API e o MySQL disponíveis e não usa esse arquivo como fallback na inicialização.
 
 ## Deploy gratuito
 
