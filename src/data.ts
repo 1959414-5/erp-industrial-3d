@@ -1,7 +1,7 @@
 // Dados de exemplo. Para usar os seus, coloque public/data.json no mesmo formato de `Dataset`
 // (ou troque loadData por uma chamada à sua API, ex.: MySQL via backend).
 export type TabKey = 'producao' | 'estoque' | 'comercial';
-export type MachineType = 'laser' | 'pressBrake' | 'cnc' | 'robotWelder' | 'paintBooth' | 'punchPress' | 'bandSaw';
+export type MachineType = 'laser' | 'plasma' | 'pressBrake' | 'cnc' | 'robotWelder' | 'paintBooth' | 'punchPress' | 'bandSaw';
 export interface Kpi { label: string; value: string; delta?: number }
 export interface Series { title: string; items: { label: string; value: number }[] }
 export interface Machine { id: string; name: string; oee: number; status: 'run' | 'idle' | 'down'; type?: MachineType; order?: string; producedToday?: number; scrapPct?: number }
