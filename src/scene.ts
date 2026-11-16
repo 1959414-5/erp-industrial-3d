@@ -207,7 +207,6 @@ export class Factory {
       ['PRODUÇÃO',  0x3b82f6, -15,  6],
       ['ESTOQUE',   0xf26a1b,  35, -8],
       ['EXPEDIÇÃO', 0x22b573, -36, 16],
-      ['COMERCIAL', 0x7c5cfc,  27, 12],
     ];
     for (const [t, c, x, z] of signs) {
       const s = buildSectorSign(t as string, c as number);
