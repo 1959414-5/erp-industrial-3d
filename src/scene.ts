@@ -329,7 +329,7 @@ export class Factory {
       this.addEditable(`marker-${i}`, mk.group);
     });
   }
-  setOccupancy(values: number[]) { this.lots.setOccupancy(values); }
+  setOccupancy(values: number[], states: string[] = []) { this.lots.setOccupancy(values, states); }
   focus(tab: TabKey) { this.goal = { pos: FOCUS[tab].pos.clone(), target: FOCUS[tab].target.clone() }; }
 
   /** Seleciona e leva a câmera até o objeto (usado pelo assistente de IA). */
