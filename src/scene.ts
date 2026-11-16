@@ -62,6 +62,8 @@ export class Factory {
   private ringSel = ring(0xf26a1b, 0.95);
   private ringHover = ring(0x3b82f6, 0.55);
   private move: PointerEvent | null = null;
+  private cameraDragging = false;
+  private shadowMode: boolean | null = null;
   private down = { x: 0, y: 0 };
   onHover: (s: Selection | null, x: number, y: number) => void = () => {};
   onPick: (s: Selection | null) => void = () => {};
@@ -80,7 +82,18 @@ export class Factory {
     addEventListener('keydown', (e) => { if (e.key === 'Control') this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN; });
     addEventListener('keyup', (e) => { if (e.key === 'Control') this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; });
     this.controls.target.copy(FOCUS.producao.target);
-    this.controls.addEventListener('start', () => { this.goal = null; });
+    this.controls.addEventListener('start', () => {
+      this.goal = null;
+      this.cameraDragging = true;
+      this.move = null;
+      this.hover = null;
+      this.place(this.ringHover, null);
+      this.onHover(null, 0, 0);
+    });
+    this.controls.addEventListener('end', () => {
+      this.cameraDragging = false;
+      this.move = null;
+    });
     this.buildLights(); this.buildWorld(); this.scene.add(this.ringSel, this.ringHover);
     addEventListener('resize', () => this.resize());
     if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
@@ -624,8 +637,8 @@ export class Factory {
       this.renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
     }
     const overviewMode = cameraDistance > 58;
-    this.renderer.shadowMap.enabled = !overviewMode;
-    if (this.move) {
+    if (this.shadowMode !== !overviewMode) { this.shadowMode = !overviewMode; this.renderer.shadowMap.enabled = this.shadowMode; }
+    if (this.move && !this.cameraDragging) {
       const e = this.move; this.move = null; const h = this.hit(e);
       if (!same(h, this.hover)) { this.hover = h; this.place(this.ringHover, same(h, this.selected) ? null : h); }
       this.canvas.style.cursor = h ? 'pointer' : 'grab'; this.onHover(h, e.clientX, e.clientY);
