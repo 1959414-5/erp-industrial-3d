@@ -77,7 +77,12 @@ export class Factory {
     this.controls.target.copy(FOCUS.producao.target);
     this.controls.addEventListener('start', () => { this.goal = null; });
     this.buildLights(); this.buildWorld(); this.scene.add(this.ringSel, this.ringHover);
-    addEventListener('resize', () => this.resize()); this.resize();
+    addEventListener('resize', () => this.resize());
+    if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
+      const observer = new ResizeObserver(() => this.resize());
+      observer.observe(canvas.parentElement);
+    }
+    this.resize();
     canvas.addEventListener('pointermove', (e) => { this.move = e; });
     canvas.addEventListener('pointerdown', (e) => { this.down = { x: e.clientX, y: e.clientY }; });
     canvas.addEventListener('pointerup', (e) => {
@@ -426,7 +431,14 @@ export class Factory {
     const f = this.foot(s); r.position.set(f.c.x, 0.04, f.c.z); r.scale.set(f.a, f.b, 1); r.visible = true;
   }
 
-  private resize() { const w = innerWidth, h = innerHeight; this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
+  private resize() {
+    const rect = this.canvas.parentElement?.getBoundingClientRect() ?? this.canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
 
   private frame() {
     const dt = Math.min(this.clock.getDelta(), 0.1); this.t += dt; const t = this.t;
