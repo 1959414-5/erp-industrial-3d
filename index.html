@@ -1,7 +1,47 @@
 <!doctype html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ERP Industrial Analytics 3D</title></head>
-<body>
+<body class="is-connecting">
+  <div id="connection-screen" class="connection-screen" role="status" aria-live="polite" aria-busy="true">
+    <div class="connection-shell">
+      <div class="connection-brand">
+        <span class="connection-logo">▲</span>
+        <div><strong>GESTÃO INDUSTRIAL</strong><small>ERP ANALYTICS · 3D</small></div>
+      </div>
+      <div class="connection-main">
+        <div class="connection-kicker"><span class="connection-live-dot"></span> INICIALIZAÇÃO DO AMBIENTE</div>
+        <h1 id="connection-title">Conectando à API na nuvem</h1>
+        <p id="connection-description">Estamos estabelecendo uma conexão segura com os serviços da aplicação.</p>
+        <div class="connection-steps">
+          <div class="connection-step is-active" data-connection-step="api">
+            <span class="connection-step-index">01</span>
+            <span class="connection-step-copy"><b>API na nuvem</b><small>Disponibilidade do serviço</small></span>
+            <span class="connection-step-state">Em andamento</span>
+          </div>
+          <div class="connection-step" data-connection-step="database">
+            <span class="connection-step-index">02</span>
+            <span class="connection-step-copy"><b>Banco MySQL</b><small>Validação da conexão</small></span>
+            <span class="connection-step-state">Aguardando</span>
+          </div>
+          <div class="connection-step" data-connection-step="data">
+            <span class="connection-step-index">03</span>
+            <span class="connection-step-copy"><b>Dados industriais</b><small>Produção, estoque e comercial</small></span>
+            <span class="connection-step-state">Aguardando</span>
+          </div>
+        </div>
+        <div class="connection-status">
+          <span class="connection-spinner" id="connection-spinner"></span>
+          <span id="connection-status-text">Aguardando resposta da API...</span>
+        </div>
+        <div id="connection-error" class="connection-error" hidden>
+          <p id="connection-error-text"></p>
+          <button id="connection-retry" type="button">↻ Tentar novamente</button>
+        </div>
+        <p class="connection-foot">CONEXÃO SEGURA · BANCO DE DADOS EM NUVEM</p>
+      </div>
+      <div class="connection-footer"><span>ERP INDUSTRIAL ANALYTICS</span><span>DATABASE LINK · MYSQL</span></div>
+    </div>
+  </div>
   <canvas id="scene"></canvas>
   <div id="ui">
     <header><div class="brand"><span class="logo">▲</span><div><b>Gestão Industrial</b><small>ERP Analytics</small></div></div><nav id="tabs"></nav><div class="hright"><button id="movebtn" aria-pressed="false" title="Mover painéis (arrastar)" aria-label="Mover painéis">✥</button><button id="aibtn" aria-expanded="false" title="Perguntar à IA sobre os dados">✨ Assistente IA</button><span class="badge">dados de exemplo</span></div></header>
