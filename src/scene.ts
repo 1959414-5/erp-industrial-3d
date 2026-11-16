@@ -39,6 +39,7 @@ export class Factory {
   private camera = new THREE.PerspectiveCamera(28, 1, 0.1, 500);
   private controls: OrbitControls;
   private clock = new THREE.Clock();
+  private currentPixelRatio = 0;
   private t = 0;
   private goal: { pos: THREE.Vector3; target: THREE.Vector3 } | null = FOCUS.producao;
   private machineGroups: THREE.Group[] = [];
@@ -69,7 +70,8 @@ export class Factory {
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     // Reduz o custo de rasterização sem perder nitidez perceptível durante a navegação.
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    this.currentPixelRatio = Math.min(devicePixelRatio, 1.5);
+    this.renderer.setPixelRatio(this.currentPixelRatio);
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.camera.position.copy(FOCUS.producao.pos);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -609,6 +611,20 @@ export class Factory {
 
   private frame() {
     const dt = Math.min(this.clock.getDelta(), 0.1); this.t += dt; const t = this.t;
+    // Em visão geral, a fábrica inteira fica visível. Reduzimos a resolução de
+    // renderização e suspendemos o passe de sombras, que é o custo mais alto nesse enquadramento.
+    const cameraDistance = this.camera.position.distanceTo(this.controls.target);
+    const targetPixelRatio = cameraDistance > 95 ? Math.min(devicePixelRatio, 0.75)
+      : cameraDistance > 58 ? Math.min(devicePixelRatio, 0.95)
+        : Math.min(devicePixelRatio, 1.35);
+    if (Math.abs(targetPixelRatio - this.currentPixelRatio) > 0.05) {
+      this.currentPixelRatio = targetPixelRatio;
+      this.renderer.setPixelRatio(targetPixelRatio);
+      const rect = this.canvas.parentElement?.getBoundingClientRect() ?? this.canvas.getBoundingClientRect();
+      this.renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
+    }
+    const overviewMode = cameraDistance > 58;
+    this.renderer.shadowMap.enabled = !overviewMode;
     if (this.move) {
       const e = this.move; this.move = null; const h = this.hit(e);
       if (!same(h, this.hover)) { this.hover = h; this.place(this.ringHover, same(h, this.selected) ? null : h); }
@@ -620,12 +636,24 @@ export class Factory {
     }
     if (this.wallMode === 'cutaway') this.updateCutaway();
     this.cartons.forEach((c, i) => { c.position.x = ((t * 1.6 + i * 2.5) % 30) - 20; });
-    this.models.forEach((m, i) => m.update(dt, this.statuses[i]));
-    this.operators.forEach((o) => o.update(t));
-    this.markers.forEach((m) => m.update(t));
-    this.props.forEach((p) => p.update(t));
-    this.office.update(t);
-    this.assetMixers.forEach((mixer) => mixer.update(dt));
+    // Em zoom aberto, animações pequenas não são perceptíveis. Atualizá-las
+    // apenas quando a câmera está próxima reduz CPU sem alterar os modelos.
+    if (cameraDistance <= 78) {
+      this.models.forEach((m, i) => {
+        if (this.camera.position.distanceTo(this.machineGroups[i].position) < 62) m.update(dt, this.statuses[i]);
+      });
+      this.operators.forEach((o) => {
+        if (this.camera.position.distanceTo(o.group.position) < 55) o.update(t);
+      });
+      this.markers.forEach((m) => {
+        if (this.camera.position.distanceTo(m.group.position) < 72) m.update(t);
+      });
+      this.props.forEach((p) => {
+        if (this.camera.position.distanceTo(p.group.position) < 65) p.update(t);
+      });
+      if (this.camera.position.distanceTo(this.office.group.position) < 58) this.office.update(t);
+      this.assetMixers.forEach((mixer) => mixer.update(dt));
+    }
     if (this.selected) {
       const projected = this.foot(this.selected).anchor.clone().project(this.camera);
       const rect = this.canvas.getBoundingClientRect();
