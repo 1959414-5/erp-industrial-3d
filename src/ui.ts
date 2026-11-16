@@ -245,7 +245,7 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     pin(selection: Selection | null) {
       selected = selection;
       paintSelected();
-      if (!selection || isEmpty(selection)) { card.style.display = 'none'; return; }
+      if (!selection || isEmpty(selection)) { card.style.display = 'none'; card.classList.remove('is-below'); return; }
       const detailData = detail(selection);
       card.innerHTML = `<button class="x" aria-label="Fechar">×</button><small>${escapeHtml(detailData.kicker)}</small><h4>${escapeHtml(detailData.title)}</h4>
         <span class="st" style="background:${detailData.color}22;color:${detailData.color}">${escapeHtml(detailData.status)}</span>${detailData.body}`;
@@ -255,9 +255,33 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     },
     place(x: number, y: number, visible: boolean) {
       if (card.style.display !== 'block') return;
-      card.style.visibility = visible ? 'visible' : 'hidden';
-      card.style.left = Math.min(Math.max(x, 125), innerWidth - 125) + 'px';
-      card.style.top = Math.max(y - 12, card.offsetHeight + 12) + 'px';
+      const canvas = document.getElementById('scene');
+      const rect = canvas?.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        card.style.visibility = 'hidden';
+        return;
+      }
+
+      const width = card.offsetWidth || 220;
+      const height = card.offsetHeight || 180;
+      const withinFrame = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      card.style.visibility = visible && withinFrame ? 'visible' : 'hidden';
+      if (!visible || !withinFrame) return;
+
+      const minX = rect.left + width / 2 + 8;
+      const maxX = rect.right - width / 2 - 8;
+      const left = minX <= maxX ? Math.min(Math.max(x, minX), maxX) : rect.left + rect.width / 2;
+      card.style.left = left + 'px';
+
+      // Sempre tenta manter o cartão acima do objeto; só o coloca abaixo quando
+      // não existe altura livre suficiente no topo do quadro 3D.
+      const canStayAbove = y - height - 14 >= rect.top + 6;
+      card.classList.toggle('is-below', !canStayAbove);
+      if (canStayAbove) {
+        card.style.top = Math.min(y - 12, rect.bottom - 8) + 'px';
+      } else {
+        card.style.top = Math.min(y + 12, rect.bottom - height - 8) + 'px';
+      }
     },
   };
 }
