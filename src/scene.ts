@@ -7,6 +7,7 @@ import { buildOffice } from './office';
 import { buildWorker, buildForklift, buildExpedition, buildSheetStack, buildMarker, buildRack,
   buildRoamer, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
 import { buildFloor } from './floor';
+import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
 export type WallMode = 'cutaway' | 'high' | 'low';
 
@@ -47,6 +48,7 @@ export class Factory {
   private lots = new SheetLots();
   private office = buildOffice();
   private props: Prop[] = [];
+  private assetMixers: THREE.AnimationMixer[] = [];
   private operators: Prop[] = [];
   private machineProps: THREE.Object3D[] = [];
   private markers: Prop[] = [];
@@ -140,15 +142,21 @@ export class Factory {
 
     // ── ESTOQUE — porta-paletes altos + lotes de chapas ──────────
     this.scene.add(this.lots.group);
-    const stkRack1 = buildRack(13.5); stkRack1.position.set(43.5, 0, -31.5); this.scene.add(stkRack1);
-    const stkRack2 = buildRack(13.2); stkRack2.position.set(27.0, 0, -18.5); this.scene.add(stkRack2);
-    const stkRack3 = buildRack(13.5); stkRack3.position.set(43.5, 0, -18.5); this.scene.add(stkRack3);
+    // Roots permanecem estáveis para preservar edição/seleção; o GLB entra como conteúdo visual.
+    const stkRack1 = new THREE.Group(); stkRack1.add(buildRack(13.5)); stkRack1.position.set(43.5, 0, -31.5); this.scene.add(stkRack1);
+    const stkRack2 = new THREE.Group(); stkRack2.add(buildRack(13.2)); stkRack2.position.set(27.0, 0, -18.5); this.scene.add(stkRack2);
+    const stkRack3 = new THREE.Group(); stkRack3.add(buildRack(13.5)); stkRack3.position.set(43.5, 0, -18.5); this.scene.add(stkRack3);
     this.addEditable('rack-stock-1', stkRack1); this.addEditable('rack-stock-2', stkRack2); this.addEditable('rack-stock-3', stkRack3);
+    void this.replaceRackModules(stkRack1, 'palletRack', 4, 3.2, 3.2);
+    void this.replaceRackModules(stkRack2, 'palletRack', 4, 3.15, 3.2);
+    void this.replaceRackModules(stkRack3, 'palletRack', 4, 3.2, 3.2);
 
-    // ── MATÉRIA-PRIMA — racks baixos atrás da produção ───────────
-    const rawA = buildRack(14); rawA.position.set(-26, 0, -16); this.scene.add(rawA);
-    const rawB = buildRack(14); rawB.position.set(-4, 0, -16);  this.scene.add(rawB);
+    // ── MATÉRIA-PRIMA — estantes para chapas ──────────────────────
+    const rawA = new THREE.Group(); rawA.add(buildRack(14)); rawA.position.set(-26, 0, -16); this.scene.add(rawA);
+    const rawB = new THREE.Group(); rawB.add(buildRack(14)); rawB.position.set(-4, 0, -16);  this.scene.add(rawB);
     this.addEditable('rack-raw-a', rawA); this.addEditable('rack-raw-b', rawB);
+    void this.replaceRackModules(rawA, 'sheetRack', 4, 3.45, 2.75);
+    void this.replaceRackModules(rawB, 'sheetRack', 4, 3.45, 2.75);
 
     // ── ESCRITÓRIO COMERCIAL (frente-direita, 3 salas) ───────────
     this.office.group.position.set(27.25, 0, 20.5);
@@ -220,7 +228,7 @@ export class Factory {
       { path: [[-38, -19.5], [14, -19.5]],  speed: 2.8, carry: true },   // corredor traseiro
     ];
     for (const r of routes) {
-      const f = buildForklift(r); this.props.push(f); this.scene.add(f.group);
+      const f = buildForklift(r); this.props.push(f); this.scene.add(f.group); void this.replaceMovingForklift(f.group);
     }
 
     // ── trabalhadores caminhando (rotas SEPARADAS das empilhadeiras) ──
@@ -288,6 +296,97 @@ export class Factory {
     return g;
   }
 
+  /** Ajusta um GLB ao envelope visual do equipamento sem mudar o root de seleção. */
+  private fitImportedModel(model: THREE.Group, maxFootprint: number, maxHeight: number) {
+    const bounds = new THREE.Box3().setFromObject(model);
+    const size = bounds.getSize(new THREE.Vector3());
+    const footprint = Math.max(size.x, size.z, 0.001);
+    const height = Math.max(size.y, 0.001);
+    const scale = Math.min(maxFootprint / footprint, maxHeight / height);
+    model.scale.multiplyScalar(scale);
+    const fitted = new THREE.Box3().setFromObject(model);
+    model.position.y -= fitted.min.y;
+  }
+
+  /** Substitui apenas o conteúdo visual; o grupo raiz, índice, posição e eventos permanecem iguais. */
+  private async replaceMachineVisual(index: number, key: IndustrialAssetKey) {
+    const root = this.machineGroups[index];
+    if (!root) return;
+    try {
+      const asset = await loadIndustrialAsset(key);
+      if (this.machineGroups[index] !== root || !root.parent) return;
+
+      this.fitImportedModel(asset.scene, key === 'bandSaw' ? 3.5 : 4.0, key === 'bandSaw' ? 2.65 : 3.1);
+      root.clear();
+      root.add(asset.scene);
+
+      const clip = key === 'bandSaw'
+        ? asset.animations.find((item) => /blade|spin|saw/i.test(item.name))
+        : undefined;
+      if (clip) {
+        const mixer = new THREE.AnimationMixer(asset.scene);
+        const action = mixer.clipAction(clip);
+        this.models[index] = {
+          group: root,
+          update: (dt, status) => {
+            if (status === 'run') {
+              if (!action.isRunning()) action.reset().play();
+              mixer.update(dt);
+            } else if (action.isRunning()) {
+              action.stop();
+            }
+          },
+        };
+      } else {
+        this.models[index] = { group: root, update: () => {} };
+      }
+    } catch (error) {
+      // O equipamento procedural continua visível se a rede/CDN estiver indisponível.
+      console.warn(`Não foi possível carregar o modelo GLB ${key}; mantendo o modelo local.`, error);
+    }
+  }
+
+  /** Carrega um conjunto de módulos GLB dentro do mesmo root de layout/edição. */
+  private async replaceRackModules(root: THREE.Group, key: 'palletRack' | 'sheetRack', count: number, spacing: number, targetHeight: number) {
+    try {
+      const asset = await loadIndustrialAsset(key);
+      if (!root.parent) return;
+      this.fitImportedModel(asset.scene, spacing * 0.94, targetHeight);
+      root.clear();
+      for (let i = 0; i < count; i++) {
+        const module = asset.scene.clone(true);
+        module.position.x = (i - (count - 1) / 2) * spacing;
+        module.position.y = 0;
+        root.add(module);
+      }
+    } catch (error) {
+      console.warn(`Não foi possível carregar a estante GLB ${key}; mantendo a estante local.`, error);
+    }
+  }
+
+  /** Troca o modelo das empilhadeiras sem alterar o movimento/rota já calculado no root. */
+  private async replaceMovingForklift(root: THREE.Group) {
+    try {
+      const asset = await loadIndustrialAsset('forklift');
+      if (!root.parent) return;
+
+      // O modelo da biblioteca usa o eixo +Z como frente; as rotas existentes usam +X.
+      asset.scene.rotation.y = Math.PI / 2;
+      this.fitImportedModel(asset.scene, 3.45, 2.7);
+      root.clear();
+      root.add(asset.scene);
+
+      const clip = asset.animations.find((item) => /wheel|roll|drive/i.test(item.name));
+      if (clip) {
+        const mixer = new THREE.AnimationMixer(asset.scene);
+        mixer.clipAction(clip).setLoop(THREE.LoopRepeat, Infinity).play();
+        this.assetMixers.push(mixer);
+      }
+    } catch (error) {
+      console.warn('Não foi possível carregar a empilhadeira GLB; mantendo o modelo local.', error);
+    }
+  }
+
   /* ═══════════════════════════════════════════════════════════════════
      MÁQUINAS — layout de referência (2 fileiras)
      Fileira superior z = -11.5: laser×3, dobradeira×2, CNC×3
@@ -317,6 +416,10 @@ export class Factory {
       model.group.rotation.y = back ? 0 : Math.PI;
       this.scene.add(model.group); this.machineGroups.push(model.group); this.models.push(model); this.statuses.push(m.status);
       this.addEditable(`machine-${i}`, model.group);
+      const importedType: IndustrialAssetKey | null = ty === 'cnc' ? 'cnc'
+        : ty === 'pressBrake' ? 'pressBrake'
+          : ty === 'bandSaw' ? 'bandSaw' : null;
+      if (importedType) void this.replaceMachineVisual(i, importedType);
       // operador no lado do corredor
       const opZ = back ? mz + 2.8 : mz - 2.8;
       const op = buildWorker(i + 1); op.group.position.set(mx, 0, opZ); op.group.rotation.y = back ? Math.PI : 0;
@@ -458,6 +561,7 @@ export class Factory {
     this.markers.forEach((m) => m.update(t));
     this.props.forEach((p) => p.update(t));
     this.office.update(t);
+    this.assetMixers.forEach((mixer) => mixer.update(dt));
     if (this.selected) { const p = this.foot(this.selected).anchor.project(this.camera); this.onAnchor((p.x * 0.5 + 0.5) * innerWidth, (-p.y * 0.5 + 0.5) * innerHeight, p.z < 1); this.ringSel.material.opacity = 0.7 + 0.25 * Math.sin(t * 4); }
     this.controls.update(); this.renderer.render(this.scene, this.camera);
   }
