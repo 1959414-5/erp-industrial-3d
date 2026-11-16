@@ -55,3 +55,19 @@ A associação com a máquina de plasma é visual. A aplicação só exibirá o 
 - Como o arquivo tem 16,9 MB e é externo, a integração é assíncrona. Se o carregamento falhar, a célula procedural original permanece como fallback.
 
 Fonte do modelo e licença: https://www.innerscene.com/tools/library/3d-parts/robotic-welding-cell-with-positioner-safety-fencing-and-ligh-f7235945
+
+## Mobiliário do setor comercial
+
+O setor comercial mantém as três salas originais (recepção, backoffice e showroom), os dez vendedores, suas rotas de atendimento e os visitantes. A camada visual de mobiliário agora usa modelos GLB da coleção **Downtown Office Interiors** e do pacote **Office Lobby and Building Facilities**, ambos CC0 1.0 Universal.
+
+| Uso no ERP | Modelo | Asset |
+|---|---|---|
+| Dez estações de trabalho | Office desk 1600 with panel ends | [16964](https://3dassets.dev/assets/downtown-office-interiors-desk-1600-panel-end-9c79542d) |
+| Dez cadeiras operacionais | Task chair with mesh back | [16979](https://3dassets.dev/assets/downtown-office-interiors-task-chair-mesh-b69df323) |
+| Balcão da recepção e showroom | Curved reception desk | [26133](https://3dassets.dev/assets/office-lobby-and-facilities-reception-desk-curved-83bd6cd6) |
+| Sofá de espera | Two-seat soft sofa | [16990](https://3dassets.dev/assets/downtown-office-interiors-sofa-two-seat-692d1b57) |
+| Poltronas de espera | Soft lounge armchair | [16988](https://3dassets.dev/assets/downtown-office-interiors-lounge-armchair-f30911e6) |
+
+A substituição é assíncrona e preserva o grupo raiz de cada móvel, os IDs editáveis e a geometria procedural como fallback. Os monitores e suas texturas de dashboard, as pessoas e a animação de atendimento permanecem no projeto.
+
+Fontes dos pacotes e licença: https://3dassets.dev/packs/downtown-office-interiors · https://3dassets.dev/packs/office-lobby-and-facilities
