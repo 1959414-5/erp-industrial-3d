@@ -356,7 +356,6 @@ export class Factory {
       for (let i = 0; i < count; i++) {
         const module = asset.scene.clone(true);
         module.position.x = (i - (count - 1) / 2) * spacing;
-        module.position.y = 0;
         root.add(module);
       }
     } catch (error) {
