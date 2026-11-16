@@ -1,6 +1,11 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ERP Industrial Analytics 3D</title></head>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#f3f4f6"/>
+  <title>ERP Industrial Analytics 3D</title>
+</head>
 <body class="is-connecting">
   <div id="connection-screen" class="connection-screen" role="status" aria-live="polite" aria-busy="true">
     <div class="connection-shell">
@@ -42,20 +47,88 @@
       <div class="connection-footer"><span>ERP INDUSTRIAL ANALYTICS</span><span>DATABASE LINK · MYSQL</span></div>
     </div>
   </div>
-  <canvas id="scene"></canvas>
-  <div id="ui">
-    <header><div class="brand"><span class="logo">▲</span><div><b>Gestão Industrial</b><small>ERP Analytics</small></div></div><nav id="tabs"></nav><div class="hright"><button id="movebtn" aria-pressed="false" title="Mover painéis (arrastar)" aria-label="Mover painéis">✥</button><button id="focusbtn" class="focus-btn" aria-pressed="false" title="Ocultar painéis e ampliar a fábrica">◉ Modo foco</button><button id="aibtn" aria-expanded="false" title="Perguntar à IA sobre os dados">✨ Assistente IA</button><span class="badge">dados de exemplo</span><span id="data-stamp" class="data-stamp"></span></div></header>
-    <aside id="left" class="glass"></aside>
-    <aside id="right" class="glass"></aside>
-    <section id="bottom" class="glass"></section>
+
+  <div id="ui" class="app-shell">
+    <header class="app-topbar">
+      <div class="topbar-brand">
+        <span class="logo">▲</span>
+        <div><b>Gestão Industrial</b><small>ERP Analytics</small></div>
+      </div>
+      <div class="topbar-breadcrumb">
+        <span>WORKSPACE</span><span class="crumb-sep">/</span>
+        <b id="current-module">Produção</b><span class="crumb-sep">/</span><span>Planta 3D</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="badge">conectando...</span>
+        <span id="data-stamp" class="data-stamp"></span>
+        <button id="focusbtn" class="topbar-btn" aria-pressed="false" title="Expandir a visualização 3D">Expandir 3D</button>
+        <button id="aibtn" aria-expanded="false" title="Perguntar à IA sobre os dados">Assistente IA</button>
+      </div>
+    </header>
+
+    <aside class="app-sidebar" aria-label="Navegação principal">
+      <div class="sidebar-section-label">MÓDULOS</div>
+      <nav id="tabs" class="module-nav" aria-label="Módulos"></nav>
+      <div class="sidebar-bottom">
+        <span class="sidebar-mini-label">AMBIENTE</span>
+        <div class="sidebar-environment"><span></span><b>3D</b></div>
+        <small>Digital twin</small>
+      </div>
+    </aside>
+
+    <main class="app-workspace">
+      <div class="workspace-heading">
+        <div>
+          <span class="workspace-eyebrow">VISUALIZAÇÃO OPERACIONAL</span>
+          <h1>Planta industrial</h1>
+        </div>
+        <div class="viewport-state"><span></span> Cena interativa</div>
+      </div>
+
+      <section class="viewport-frame" aria-label="Visualização tridimensional da fábrica">
+        <div class="viewport-frame-head">
+          <div><span class="frame-dot"></span><b>AMBIENTE 3D</b><small>Vista operacional</small></div>
+          <span>THREE.JS · INTERACTIVE VIEW</span>
+        </div>
+        <div class="viewport-stage" id="viewport-stage">
+          <canvas id="scene"></canvas>
+          <div id="wallctl" class="glass">
+            <span>Visualização</span>
+            <button data-wall="cutaway" class="on">Corte</button>
+            <button data-wall="high">Paredes altas</button>
+            <button data-wall="low">Paredes baixas</button>
+          </div>
+          <div class="viewport-hint">Arraste para orbitar · Scroll para zoom · Ctrl + arraste para mover</div>
+        </div>
+        <div class="viewport-frame-foot">
+          <span><i></i> Interação 3D habilitada</span>
+          <span>Selecione uma máquina ou lote para consultar</span>
+        </div>
+      </section>
+    </main>
+
+    <aside class="app-inspector" aria-label="Painel de dados e indicadores">
+      <div class="inspector-head">
+        <div><span class="workspace-eyebrow">CENTRO DE CONTROLE</span><h2>Painel de dados</h2></div>
+        <span class="inspector-live"><i></i> LIVE</span>
+      </div>
+      <label class="inspector-search">
+        <span>⌕</span>
+        <input id="inspector-search" type="search" autocomplete="off" placeholder="Pesquisar neste módulo..." aria-label="Pesquisar neste módulo"/>
+        <kbd>/</kbd>
+      </label>
+      <div class="inspector-scroll">
+        <section id="left" class="glass"></section>
+        <section id="right" class="glass"></section>
+        <section id="bottom" class="glass"></section>
+      </div>
+      <div class="inspector-foot"><span>ERP INDUSTRIAL ANALYTICS</span><span>DATA PANEL</span></div>
+    </aside>
+
     <div id="tip" class="glass"></div>
     <div id="card" class="glass"></div>
-    <div id="wallctl" class="glass">
-      <span>Paredes</span>
-      <button data-wall="cutaway" class="on">Corte</button>
-      <button data-wall="high">Altas</button>
-      <button data-wall="low">Baixas</button>
-    </div>
   </div>
+
   <script type="module" src="/src/main.ts"></script>
-</body></html>
+</body>
+</html>
