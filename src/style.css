@@ -853,3 +853,138 @@ body.focus-mode #ai{right:16px}
 @media(prefers-reduced-motion:reduce){
   .module-nav button,.chip,.bar-fill{transition:none}
 }
+
+
+/* ───────── Visual clarity pass: larger viewport, readable inspector ───────── */
+#ui.app-shell{
+  grid-template-columns:64px minmax(0,1fr) 386px;
+  grid-template-rows:56px minmax(0,1fr);
+}
+.app-topbar{height:56px;padding:0 18px;gap:22px}
+.topbar-brand{min-width:200px}
+.app-workspace{padding:8px 10px 10px;gap:0}
+.workspace-heading{display:none}
+.viewport-frame{border-radius:9px}
+.viewport-frame-head{flex-basis:27px;padding:0 11px}
+.viewport-frame-foot{flex-basis:23px;padding:0 11px;font-size:8px}
+.viewport-frame-head b{font-size:8.5px}
+.viewport-frame-head small{font-size:8.5px}
+.viewport-frame-head>span{font-size:7.5px}
+.viewport-state{font-size:9px}
+.viewport-hint{font-size:8px;padding:7px 9px}
+.app-inspector{min-width:0}
+.inspector-head{padding:15px 16px 12px}
+.inspector-head h2{font-size:15px}
+.workspace-eyebrow{font-size:8px}
+.inspector-live{font-size:8px;padding:6px 8px}
+.inspector-search{margin:10px 14px 0;padding:9px 10px}
+.inspector-search input{font-size:10px}
+.inspector-search kbd{font-size:9px}
+.inspector-scroll{gap:12px;padding:13px 14px 16px}
+#left,#right,#bottom{gap:12px;padding:14px;border-radius:8px}
+.panel-heading h3,.bottom-heading h3{font-size:12px}
+.panel-overline{font-size:7.5px}
+.panel-collapse{width:24px;height:24px;flex-basis:24px;font-size:14px}
+.kpi-grid{gap:8px}
+.kpi{min-height:74px;padding:10px;gap:8px;border-radius:7px}
+.kpi-icon{width:25px;height:25px;flex-basis:25px;font-size:10px}
+.kpi-head{gap:8px}
+.kpi-head small{font-size:9px;line-height:1.2}
+#left .kpi b.kpi-value{font-size:17px;letter-spacing:-.035em}
+#left .kpi i{font-size:8px}
+.bars{gap:12px;margin-top:7px}
+.bar-row{gap:5px}
+.bar-meta{font-size:9.5px}
+.bar-meta b{font-size:9.5px}
+.bar-track{height:7px}
+.bottom-count{font-size:8px}
+.stock-filter{font-size:8px;padding:6px 8px}
+.stock-filter b{font-size:8px}
+.stock-legend{font-size:7.5px}
+.heat{grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-height:220px}
+.cell{min-height:31px;font-size:8.5px}
+.stock-hint{font-size:8px}
+.chips{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:start;
+  gap:6px;
+  max-height:260px;
+  overflow:auto;
+}
+.chip{
+  min-width:0;width:100%;min-height:31px;
+  gap:6px;padding:7px 8px;border-radius:6px;
+  font-size:9px;white-space:nowrap;overflow:hidden;
+}
+.chip .dot{width:7px;height:7px;flex-basis:7px}
+.chip b{font-size:9px;white-space:nowrap}
+#bottom .chips{max-height:260px}
+.inspector-foot{font-size:7px;flex-basis:24px}
+#ai{right:400px;top:68px;bottom:12px;width:360px}
+.ai-head b{font-size:12px}
+.ai-head small{font-size:9px}
+.ai-msg{font-size:10px}
+.ai-chips button{font-size:9px}
+.ai-form input{font-size:10px}
+
+/* Estado visual do 3D, sem competir com o conteúdo */
+.viewport-stage{
+  background:linear-gradient(145deg,#d5d9de,#e6e8eb);
+}
+.viewport-frame{border-color:#cbd0d6;box-shadow:0 5px 18px rgba(38,49,63,.075)}
+.viewport-frame-head,.viewport-frame-foot{background:rgba(255,255,255,.98)}
+#wallctl{padding:6px 7px}
+#wallctl span{font-size:8.5px}
+#wallctl button{padding:6px 9px;font-size:8.5px}
+
+/* O quadro 3D ocupa mais altura; em ecrãs médios mantém a hierarquia */
+@media(max-width:1180px){
+  #ui.app-shell{grid-template-columns:60px minmax(0,1fr) 340px}
+  .topbar-brand{min-width:175px}
+}
+@media(max-width:1050px){
+  #ui.app-shell{grid-template-columns:58px minmax(0,1fr) 320px}
+  .topbar-brand{min-width:160px}
+  .topbar-breadcrumb{display:none}
+  .inspector-scroll{padding:10px}
+  #left,#right,#bottom{padding:11px}
+  .kpi{min-height:68px}
+}
+@media(max-width:780px){
+  #ui.app-shell{grid-template-columns:58px minmax(0,1fr);grid-template-rows:54px minmax(0,1fr) 42vh}
+  .app-topbar{height:54px;padding:0 10px;gap:10px}
+  .app-workspace{padding:7px;gap:0}
+  .workspace-heading{display:none}
+  .viewport-frame-head{flex-basis:24px}
+  .viewport-frame-foot{flex-basis:21px}
+  .inspector-scroll{grid-template-columns:1fr 1fr;gap:8px;padding:8px 10px}
+  #left,#right,#bottom{padding:9px}
+  .kpi{min-height:62px}
+  .kpi-head small{font-size:8px}
+  #left .kpi b.kpi-value{font-size:15px}
+  .chip{font-size:8px}
+  #ai{right:10px;top:62px;bottom:10px;width:min(360px,calc(100vw - 78px))}
+}
+@media(max-width:520px){
+  #ui.app-shell{grid-template-columns:50px minmax(0,1fr);grid-template-rows:52px minmax(0,1fr) 44vh}
+  .app-topbar{height:52px;padding:0 8px}
+  .topbar-brand{min-width:0}
+  .topbar-brand b{font-size:10px}
+  .topbar-actions{gap:5px}
+  .topbar-actions .badge,.topbar-actions .data-stamp{display:none}
+  .topbar-btn{padding:6px 7px;font-size:8px}
+  #aibtn{padding:7px 8px;font-size:8px}
+  .app-workspace{padding:6px}
+  .viewport-frame-head,.viewport-frame-foot{padding:0 7px}
+  .viewport-frame-head>span,.viewport-frame-head small{display:none}
+  .viewport-frame-foot span:last-child{display:none}
+  .inspector-scroll{grid-template-columns:1fr;gap:7px;padding:7px 8px}
+  #left,#right,#bottom{padding:8px}
+  .kpi{min-height:56px;padding:7px}
+  .kpi-head small{font-size:7.5px}
+  #left .kpi b.kpi-value{font-size:13px}
+  .chips{grid-template-columns:1fr;max-height:150px}
+  .heat{grid-template-columns:repeat(7,minmax(0,1fr));max-height:90px}
+  #ai{right:7px;top:60px;bottom:7px;width:calc(100vw - 66px)}
+}
