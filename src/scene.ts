@@ -17,9 +17,9 @@ const TYPE_LABEL: Record<MachineType, string> = {
 
 /* ── Câmeras por aba ────────────────────────────────────────────────── */
 const FOCUS: Record<TabKey, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
-  producao: { pos: new THREE.Vector3(-12, 38, 32), target: new THREE.Vector3(-12, 0, -5) },
-  estoque:  { pos: new THREE.Vector3(55, 28, -5),   target: new THREE.Vector3(35, 0, -20) },
-  comercial:{ pos: new THREE.Vector3(27, 22, 38),   target: new THREE.Vector3(27, 0, 20) },
+  producao: { pos: new THREE.Vector3(-12, 41, 28), target: new THREE.Vector3(-12, 0.5, -5) },
+  estoque:  { pos: new THREE.Vector3(54, 31, -7),   target: new THREE.Vector3(35, 0.5, -20) },
+  comercial:{ pos: new THREE.Vector3(27.25, 25, 33.5), target: new THREE.Vector3(27.25, 0.5, 20.5) },
 };
 const mat = (color: number, rough = 0.85) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.05 });
 function box(w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0) {
@@ -97,12 +97,12 @@ export class Factory {
   }
 
   private buildLights() {
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xd3dcec, 1.25));
-    const sun = new THREE.DirectionalLight(0xfff4e8, 1.7); sun.position.set(-30, 52, 36); sun.castShadow = true;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 0.98;
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xc4cbd4, 1.05));
+    const sun = new THREE.DirectionalLight(0xfff7f0, 1.45); sun.position.set(-30, 52, 36); sun.castShadow = true;
     sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -64, right: 64, top: 50, bottom: -50, near: 1, far: 200 });
-    sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04; sun.shadow.radius = 5; this.scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xdfe8ff, 0.5); fill.position.set(32, 28, -22); this.scene.add(fill);
+    sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.035; sun.shadow.radius = 3.5; this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xe7ebf0, 0.35); fill.position.set(32, 28, -22); this.scene.add(fill);
   }
 
   setWallMode(mode: WallMode) {
@@ -121,11 +121,11 @@ export class Factory {
     // pátio externo (grama, rua/loop, estacionamento)
     this.scene.add(buildYard());
     // base do piso 104 × 72 + chão pintado
-    this.scene.add(box(104, 0.5, 72, mat(0xdfe5ee), 0, -0.5, 0));
+    this.scene.add(box(104, 0.5, 72, mat(0xd5dae1), 0, -0.5, 0));
     this.scene.add(buildFloor());
 
     // ── muros baixos (perímetro) — frente aberta ─────────────────
-    const wallMat = mat(0xdbe2ee, 0.85), cap = mat(0x3b82f6, 0.5);
+    const wallMat = mat(0xd6dbe1, 0.85), cap = mat(0xe96b2c, 0.5);
     const lowWall = (w: number, d: number, x: number, z: number) => {
       this.scene.add(box(w, 0.7, d, wallMat, x, 0, z));
       this.scene.add(box(w + 0.03, 0.06, d + 0.03, cap, x, 0.7, z));
