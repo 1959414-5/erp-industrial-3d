@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { buildCounter, buildPrinter, buildWaterCooler, buildTV, buildServerRack, buildCabinet,
-  buildSofa, buildCoffeeTable, buildWaitChair, buildProductDisplay } from './props';
+  buildSofa, buildCoffeeTable, buildWaitChair } from './props';
 import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
 const std = (color: number, rough = 0.6, metal = 0.05) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
@@ -13,10 +13,21 @@ const cyl = (r: number, h: number, m: THREE.Material, x = 0, y = 0, z = 0, s = 1
 /** Vasinho com planta. */
 function plant(x: number, z: number): THREE.Group {
   const p = new THREE.Group();
-  p.add(cyl(0.22, 0.44, std(0xd4dcea, 0.7), x, 0, z, 16));
-  const f1 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), std(0x7c8591, 0.85)); f1.position.set(x, 1.02, z);
-  const f2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), std(0x9aa1aa, 0.85)); f2.position.set(x + 0.2, 1.32, z - 0.08);
-  p.add(f1, f2); return p;
+  const pot = std(0xd4dcea, 0.7), soil = std(0x514438, 0.95);
+  const leafDark = std(0x285d39, 0.9), leafGreen = std(0x3f824b, 0.88), leafLight = std(0x69a35e, 0.88);
+  p.add(cyl(0.22, 0.44, pot, x, 0, z, 16), cyl(0.18, 0.035, soil, x, 0.42, z, 16));
+  p.add(cyl(0.035, 0.72, leafDark, x, 0.44, z, 8));
+  const leaves: [number, number, number, number, number][] = [
+    [0, 1.02, 0, 0.42, 0], [-0.28, 1.02, 0.02, 0.34, 0.7],
+    [0.28, 1.12, 0.02, 0.38, -0.7], [-0.16, 1.35, -0.08, 0.32, -0.6],
+    [0.18, 1.42, 0.06, 0.3, 0.65], [0, 1.62, -0.04, 0.27, 0.15],
+  ];
+  leaves.forEach(([lx, ly, lz, size, rz], i) => {
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), i % 3 === 0 ? leafLight : i % 2 ? leafDark : leafGreen);
+    leaf.scale.set(size * 0.58, size, size * 0.42);
+    leaf.position.set(x + lx, ly, z + lz); leaf.rotation.z = rz; leaf.castShadow = true; p.add(leaf);
+  });
+  return p;
 }
 /** Plaquinha de texto. */
 function labelBoard(txt: string): THREE.Mesh {
@@ -51,22 +62,71 @@ function dashboardTexture() {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 /** Textura de catálogo de produtos para a TV do showroom. */
-function showroomTexture() {
-  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 100; const g = cv.getContext('2d')!;
-  g.fillStyle = '#12182a'; g.fillRect(0, 0, 160, 100);
-  g.fillStyle = '#f26a1b'; g.fillRect(0, 0, 160, 10);
-  g.fillStyle = '#fff'; g.font = 'bold 9px Inter, Arial'; g.textAlign = 'center'; g.fillText('CATÁLOGO · DESTAQUES', 80, 7.5);
-  const colors = ['#e96b2c', '#394454', '#7c8591'];
-  for (let i = 0; i < 3; i++) {
-    const x = 10 + i * 50;
-    g.fillStyle = '#1f2a44'; g.fillRect(x, 18, 42, 58);
-    g.fillStyle = colors[i]; g.beginPath(); g.arc(x + 21, 42, 15, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#cbd5e6'; g.fillRect(x + 6, 64, 30, 4); g.fillRect(x + 10, 71, 22, 3);
-  }
+function meetingRoomTexture() {
+  const cv = document.createElement('canvas'); cv.width = 640; cv.height = 360; const g = cv.getContext('2d')!;
+  g.fillStyle = '#202a36'; g.fillRect(0, 0, 640, 360);
+  g.fillStyle = '#e96b2c'; g.fillRect(0, 0, 640, 20);
+  g.fillStyle = '#f7f9fc'; g.font = 'bold 30px Arial'; g.fillText('SALA DE REUNIÃO', 34, 76);
+  g.fillStyle = '#aeb8c4'; g.font = '18px Arial'; g.fillText('PAUTA  •  PROJETOS  •  RESULTADOS', 36, 111);
+  g.fillStyle = '#303b49'; g.fillRect(34, 150, 572, 166);
+  g.fillStyle = '#e96b2c'; g.fillRect(56, 177, 160, 10);
+  g.fillStyle = '#dfe3e8'; g.fillRect(56, 205, 260, 7); g.fillRect(56, 226, 215, 7); g.fillRect(56, 247, 295, 7);
+  [44, 74, 58, 102, 126, 88].forEach((h, i) => { g.fillStyle = i === 4 ? '#e96b2c' : '#8994a2'; g.fillRect(390 + i * 28, 286 - h, 17, h); });
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-interface Seat { arms: THREE.Group[]; head: THREE.Mesh; screen: THREE.MeshStandardMaterial; ph: number }
+/** Balcão de autoatendimento com café, água e copos para visitantes e equipe. */
+function buildCoffeeStation(): THREE.Group {
+  const g = new THREE.Group();
+  const white = std(0xe8edf2, 0.58), graphite = std(0x303b49, 0.45, 0.22), metal = std(0x8d98a3, 0.35, 0.58), orange = std(0xe96b2c, 0.42), glass = std(0x9bb7c5, 0.22, 0.12);
+  g.add(b(3.35, 0.88, 0.76, white, 0, 0, 0), b(3.46, 0.08, 0.84, graphite, 0, 0.88, 0));
+  g.add(b(3.1, 0.11, 0.035, orange, 0, 0.48, 0.39));
+  for (const x of [-1.45, 1.45]) g.add(b(0.035, 0.72, 0.035, metal, x, 0.08, -0.25));
+  // Máquina de espresso dupla com painel e bicos metálicos.
+  g.add(b(0.82, 0.56, 0.48, graphite, -0.83, 0.96, -0.03), b(0.72, 0.08, 0.42, metal, -0.83, 1.52, -0.03));
+  g.add(b(0.28, 0.18, 0.025, glass, -0.83, 1.2, 0.22), b(0.12, 0.045, 0.035, orange, -0.83, 1.42, 0.23));
+  for (const x of [-1.03, -0.63]) g.add(cyl(0.035, 0.18, metal, x, 1.02, 0.23, 10), cyl(0.07, 0.06, white, x, 1.0, 0.23, 12));
+  // Moedor, bandeja e copos.
+  g.add(b(0.38, 0.42, 0.38, metal, 0.05, 0.96, -0.02), cyl(0.13, 0.22, glass, 0.24, 1.38, -0.02, 14));
+  g.add(cyl(0.16, 0.24, graphite, 0.95, 0.96, -0.02, 16), b(0.34, 0.12, 0.34, metal, 0.95, 1.2, -0.02));
+  g.add(b(0.9, 0.035, 0.42, metal, 0.92, 0.98, 0.18));
+  for (let i = 0; i < 4; i++) {
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.05, 0.13, 12), white);
+    cup.position.set(0.62 + (i % 2) * 0.2, 1.08 + Math.floor(i / 2) * 0.01, 0.18 + Math.floor(i / 2) * 0.08); cup.castShadow = true; g.add(cup);
+  }
+  const sign = labelBoard('CAFÉ  •  ÁGUA'); sign.scale.setScalar(0.42); sign.position.set(0, 1.72, -0.385); g.add(sign);
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+/** Mesa executiva de reunião com calha central para energia e conectividade. */
+function buildConferenceTable(): THREE.Group {
+  const g = new THREE.Group();
+  const top = std(0xdfe4e9, 0.48), graphite = std(0x303b49, 0.42, 0.25), metal = std(0x818c97, 0.38, 0.55), orange = std(0xe96b2c, 0.42);
+  g.add(b(4.75, 0.14, 1.5, top, 0, 0.78, 0), b(4.45, 0.025, 0.12, orange, 0, 0.92, 0));
+  g.add(b(4.3, 0.08, 1.24, graphite, 0, 0.18, 0));
+  for (const x of [-1.92, 1.92]) g.add(b(0.18, 0.76, 1.0, metal, x, 0, 0), b(0.34, 0.06, 1.18, graphite, x, 0, 0));
+  for (const x of [-1.3, 0, 1.3]) g.add(b(0.34, 0.025, 0.16, graphite, x, 0.93, 0), b(0.08, 0.012, 0.025, orange, x, 0.955, 0));
+  return g;
+}
+
+/** Cadeira estofada de reunião com braços e base metálica. */
+function buildMeetingChair(): THREE.Group {
+  const g = new THREE.Group();
+  const fabric = std(0x394454, 0.82), seam = std(0x687583, 0.78), metal = std(0x303b49, 0.42, 0.5), orange = std(0xe96b2c, 0.5);
+  g.add(b(0.62, 0.14, 0.62, fabric, 0, 0.46, 0), b(0.62, 0.68, 0.13, fabric, 0, 0.78, -0.25), b(0.48, 0.035, 0.025, seam, 0, 1.13, -0.18));
+  for (const x of [-0.38, 0.38]) g.add(b(0.07, 0.42, 0.07, metal, x, 0.52, -0.02), b(0.07, 0.08, 0.56, metal, x, 0.88, 0.02));
+  g.add(cyl(0.075, 0.42, metal, 0, 0.04, 0, 12));
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
+    const spoke = b(0.42, 0.055, 0.07, metal, Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2); spoke.rotation.y = -angle; g.add(spoke);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.045, 10), metal); wheel.rotation.z = Math.PI / 2; wheel.position.set(Math.cos(angle) * 0.42, 0.055, Math.sin(angle) * 0.42); g.add(wheel);
+  }
+  g.add(b(0.035, 0.035, 0.035, orange, 0, 0.57, 0.31));
+  return g;
+}
+
+interface Seat { arms: THREE.Group[]; head: THREE.Mesh; screen: THREE.MeshStandardMaterial | null; ph: number }
 
 type ErrandKind = 'counter' | 'water' | 'printer';
 interface Walker {
@@ -205,8 +265,8 @@ export function buildOffice() {
   // tapete sob as estações (sala 2, a mais ampla)
   group.add(b(14, 0.03, 15, std(0xe2e4e7, 0.95), 0.25, 0.12, 0));
 
-  // ── plantas nos cantos ────────────────────────────────────────
-  group.add(plant(-20.5, -8.5), plant(20.5, -8.5), plant(-20.5, 8.5), plant(20.5, 8.5));
+  // Plantas com folhagem verde em todos os setores; a posição da recepção fica livre para o café.
+  group.add(plant(20.5, -8.5), plant(-20.5, 8.5), plant(20.5, 8.5));
   group.add(plant(-7, 8), plant(8, 8));
   // plantas extras p/ preencher cantos vazios do backoffice e do showroom
   group.add(plant(2, -6), plant(16.5, 6));
@@ -218,8 +278,6 @@ export function buildOffice() {
   const counter = new THREE.Group(); counter.add(buildCounter(5.5));
   counter.position.set(-14.75, 0.12, -6.45); group.add(counter); ed('counter-reception', counter);
   replaceOfficeVisual(counter, 'curvedReceptionDesk');
-  // TV na parede do fundo, acima do balcão, com o dashboard da empresa
-  const tvRec = buildTV(tex, 1.8, 1.0); tvRec.group.position.set(-14.75, 1.65, -9.4); group.add(tvRec.group); ed('tv-reception', tvRec.group);
   // armário de arquivos
   const cabR = buildCabinet(0.9, 1.7, 0.5); cabR.position.set(-9.6, 0.12, -8.9); group.add(cabR); ed('cabinet-reception', cabR);
   // sofá + mesinha + 2 cadeiras — área de espera no canto frontal
@@ -233,8 +291,8 @@ export function buildOffice() {
   const wc2 = new THREE.Group(); wc2.add(buildWaitChair(0x394454));
   wc2.position.set(-15.6, 0.12, 6.3); wc2.rotation.y = -Math.PI / 2; group.add(wc2); ed('waitchair-2', wc2);
   replaceOfficeVisual(wc2, 'officeLoungeChair');
-  // credência baixa no canto traseiro-esquerdo (preenche o vazio perto da entrada)
-  const credenza = buildCabinet(1.6, 1.0, 0.45); credenza.position.set(-20.3, 0.12, -6.5); group.add(credenza); ed('credenza-reception', credenza);
+  // Estação de café e autoatendimento junto à entrada, fora do corredor de circulação.
+  const coffee = buildCoffeeStation(); coffee.position.set(-19.25, 0.12, -8.45); group.add(coffee); ed('coffee-station', coffee);
 
   // ── SALA 2 — Backoffice (x -7.75 a +8.25) ────────────────────
   // 3 impressoras na parede do fundo
@@ -253,33 +311,35 @@ export function buildOffice() {
   const meetC1 = buildWaitChair(0x394454); meetC1.position.set(0.8, 0.12, 7.3); meetC1.rotation.y = Math.PI; group.add(meetC1); ed('meeting-chair-1', meetC1);
   const meetC2 = buildWaitChair(0x394454); meetC2.position.set(3.2, 0.12, 5.7); meetC2.rotation.y = 0; group.add(meetC2); ed('meeting-chair-2', meetC2);
 
-  // ── SALA 3 — Showroom (x +8.25 a +21.75) ─────────────────────
-  // impressora extra no showroom
-  const prS = buildPrinter(); prS.scale.setScalar(0.9); prS.position.set(20, 0.12, -8.8); group.add(prS); ed('printer-showroom', prS);
-  // balcão de vendas do showroom (ponto de atendimento ao cliente)
-  const showCounter = new THREE.Group(); showCounter.add(buildCounter(4.5));
-  showCounter.position.set(13, 0.12, -1); group.add(showCounter); ed('counter-showroom', showCounter);
-  replaceOfficeVisual(showCounter, 'curvedReceptionDesk', [1.35, 1, 1]);
-  // TV na divisória, virada para dentro do showroom, com o catálogo de produtos
-  const tvShow = buildTV(showroomTexture(), 1.8, 1.0); tvShow.group.position.set(8.4, 1.65, -3); tvShow.group.rotation.y = Math.PI / 2; group.add(tvShow.group); ed('tv-showroom', tvShow.group);
-  // vitrines de produto
-  const disp1 = buildProductDisplay(0xf26a1b); disp1.position.set(18.5, 0.12, -1); group.add(disp1); ed('product-1', disp1);
-  const disp2 = buildProductDisplay(0x394454); disp2.position.set(18.5, 0.12, 2); group.add(disp2); ed('product-2', disp2);
-  // armário de arquivos
-  const cabS = buildCabinet(0.9, 1.7, 0.5); cabS.position.set(10, 0.12, -8.9); group.add(cabS); ed('cabinet-showroom', cabS);
+  // ── SALA 3 — Sala de reunião (x +8.25 a +21.75) ──────────────
+  // Tela fixada na parede externa do fundo; a abertura da porta da divisória permanece livre.
+  const meetingScreen = buildTV(meetingRoomTexture(), 2.8, 1.58);
+  meetingScreen.group.position.set(15, 2.05, -9.34); group.add(meetingScreen.group); ed('meeting-screen', meetingScreen.group);
+  const conference = buildConferenceTable(); conference.position.set(15, 0.12, 0); group.add(conference); ed('conference-table', conference);
+  // Seis cadeiras livres; duas posições são ocupadas pelos vendedores que participam da reunião.
+  const meetingChairSpots: [number, number, number][] = [
+    [15.5, 1.62, 0], [16.8, 1.62, 0], [13.4, -1.62, Math.PI], [14.8, -1.62, Math.PI],
+    [12.05, 0, -Math.PI / 2], [17.95, 0, Math.PI / 2],
+  ];
+  meetingChairSpots.forEach(([x, z, rotation], i) => {
+    const seat = new THREE.Group(); seat.add(buildMeetingChair());
+    seat.position.set(x, 0.12, z); seat.rotation.y = rotation; group.add(seat); ed(`meeting-chair-${i + 1}`, seat);
+  });
+  const meetingCredenza = buildCabinet(1.5, 0.92, 0.48, 0x303b49);
+  meetingCredenza.position.set(10.2, 0.12, -8.72); group.add(meetingCredenza); ed('meeting-credenza', meetingCredenza);
 
   // ── VENDEDORES — 10 estações distribuídas nas 3 salas ─────────
   // Sala 1: 2 estações (recepção)
   // Sala 2: 6 estações (backoffice, 2 fileiras × 3 colunas)
-  // Sala 3: 2 estações (showroom/consultoria)
-  // [x, z, rot] — rot=π: mesa virada para +z (vendedor sentado de frente para os clientes)
+  // Sala 3: 2 participantes sentados à mesa de reunião, sem estações individuais.
+  // Cada participante fica voltado para o centro da mesa.
   const positions: [number, number, number?][] = [
     // Sala 1 — Recepção: lado a lado, atrás do balcão (a TV fica no vão entre as duas mesas)
     [-16.3, -8.0, Math.PI], [-13.2, -8.0, Math.PI],
     // Sala 2 — Backoffice (2 fileiras × 3 colunas, mais compactas/próximas)
     [-4.2, -3.5], [-4.2, 1.5], [0, -3.5], [0, 1.5], [4.3, -3.5], [4.3, 1.5],
-    // Sala 3 — Showroom
-    [13, -3.2], [13, 1.2],
+    // Sala 3 — participantes da reunião, um de cada lado da mesa
+    [14, 0.65, 0], [16, -0.65, Math.PI],
   ];
   // Rotina de cada vendedor: para onde ele caminha periodicamente (sempre dentro da própria
   // sala — nunca atravessa divisórias, evitando qualquer colisão com paredes/objetos).
@@ -299,30 +359,30 @@ export function buildOffice() {
   ];
   let n = 0;
   for (const [px, pz, rot = 0] of positions) {
-    // posição do assento (0,95 à frente da mesa, na direção em que a mesa está virada)
     const sx = px + 0.95 * Math.sin(rot), sz = pz + 0.95 * Math.cos(rot);
-    const s = new THREE.Group(); s.position.set(px, 0.12, pz); s.rotation.y = rot;
-    // mesa: mantém o root de cada estação, trocando somente a geometria do móvel.
-    const deskVisual = new THREE.Group();
-    deskVisual.add(b(1.7, 0.06, 0.85, white, 0, 0.75, 0));
-    for (const [lx, lz] of [[-0.8, -0.38], [0.8, -0.38], [-0.8, 0.38], [0.8, 0.38]]) deskVisual.add(b(0.06, 0.75, 0.06, gray, lx, 0, lz));
-    s.add(deskVisual);
-    replaceOfficeVisual(deskVisual, 'officeDesk');
-    // monitor
-    s.add(b(0.12, 0.22, 0.1, dark, 0, 0.81, -0.15), b(0.66, 0.4, 0.04, dark, 0, 1.0, -0.15));
-    const screen = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.7 });
-    const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.34), screen); pl.position.set(0, 1.2, -0.128); pl.rotation.y = Math.PI; s.add(pl);
-    s.add(b(0.5, 0.03, 0.18, gray, 0, 0.81, 0.2), b(0.08, 0.03, 0.12, dark, 0.45, 0.81, 0.2));
-    group.add(s); sellers.push(s); ed(`desk-${n}`, s);
-
-    // vendedor sentado (figura independente da mesa, para poder sair andando)
-    // Cadeira permanece no lugar mesmo quando o vendedor levanta para atender.
-    const chairRoot = new THREE.Group(); chairRoot.position.set(sx, 0.12, sz); chairRoot.rotation.y = rot;
-    const fallbackChair = new THREE.Group();
-    fallbackChair.add(b(0.58, 0.07, 0.55, chair, 0, 0.5, 0.05), b(0.58, 0.62, 0.07, chair, 0, 0.55, 0.33), b(0.08, 0.5, 0.08, dark, 0, 0, 0.05), b(0.6, 0.05, 0.06, dark, 0, 0, 0.05), b(0.06, 0.05, 0.6, dark, 0, 0, 0.05));
-    chairRoot.add(fallbackChair); group.add(chairRoot); ed(`chair-${n}`, chairRoot);
-    replaceOfficeVisual(chairRoot, 'officeTaskChair');
-
+    const s = new THREE.Group();
+    let screen: THREE.MeshStandardMaterial | null = null;
+    if (n < 8) {
+      s.position.set(px, 0.12, pz); s.rotation.y = rot;
+      const deskVisual = new THREE.Group();
+      deskVisual.add(b(1.7, 0.06, 0.85, white, 0, 0.75, 0));
+      for (const [lx, lz] of [[-0.8, -0.38], [0.8, -0.38], [-0.8, 0.38], [0.8, 0.38]]) deskVisual.add(b(0.06, 0.75, 0.06, gray, lx, 0, lz));
+      s.add(deskVisual); replaceOfficeVisual(deskVisual, 'officeDesk');
+      // Monitores preservam as texturas dos dashboards.
+      s.add(b(0.12, 0.22, 0.1, dark, 0, 0.81, -0.15), b(0.66, 0.4, 0.04, dark, 0, 1.0, -0.15));
+      screen = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.7 });
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.34), screen); pl.position.set(0, 1.2, -0.128); pl.rotation.y = Math.PI; s.add(pl);
+      s.add(b(0.5, 0.03, 0.18, gray, 0, 0.81, 0.2), b(0.08, 0.03, 0.12, dark, 0.45, 0.81, 0.2));
+      const chairRoot = new THREE.Group(); chairRoot.position.set(sx, 0.12, sz); chairRoot.rotation.y = rot;
+      const fallbackChair = new THREE.Group();
+      fallbackChair.add(b(0.58, 0.07, 0.55, chair, 0, 0.5, 0.05), b(0.58, 0.62, 0.07, chair, 0, 0.55, 0.33), b(0.08, 0.5, 0.08, dark, 0, 0, 0.05), b(0.6, 0.05, 0.06, dark, 0, 0, 0.05), b(0.06, 0.05, 0.6, dark, 0, 0, 0.05));
+      chairRoot.add(fallbackChair); group.add(chairRoot); ed(`chair-${n}`, chairRoot);
+      replaceOfficeVisual(chairRoot, 'officeTaskChair');
+    } else {
+      // Vendedores 9 e 10 participam das reuniões, sem mesas individuais.
+      s.position.set(sx, 0.12, sz); s.rotation.y = rot; s.add(buildMeetingChair());
+    }
+    group.add(s); sellers.push(s); ed(n < 8 ? `desk-${n}` : `meeting-attendee-${n}`, s);
     const sit = new THREE.Group(); sit.position.set(sx, 0.12, sz); sit.rotation.y = rot;
     const shirt = std(SHIRTS[n % SHIRTS.length], 0.7), skin = std(SKINS[(n * 3 + 1) % SKINS.length], 0.8), pants = std(0x2b3550, 0.8);
     for (const x of [-0.12, 0.12]) sit.add(b(0.16, 0.16, 0.5, pants, x, 0.57, -0.22), b(0.14, 0.52, 0.14, pants, x, 0.02, -0.47));
@@ -342,17 +402,21 @@ export function buildOffice() {
 
     seats.push({ arms: sArms, head: sHead, screen, ph: n * 1.7 });
 
-    const e = errands[n];
-    const home = new THREE.Vector2(sx, sz);
-    const dest = new THREE.Vector2(e.dest[0], e.dest[1]);
-    const path = [home, ...(e.via ?? []).map(([x, z]) => new THREE.Vector2(x, z)), dest];
-    const walkDur = Math.max(1.6, pathLen(path) / 1.3);
-    walkers.push({
-      sit, stand: standP.group, legs: standP.legs, sArms: standP.arms, sHead: standP.head,
-      home, dest, destAng: e.ang, kind: e.kind, path,
-      period: 24 + (n * 7 % 23), phase: n * 3.1,
-      walkOut: walkDur, interact: e.kind === 'counter' ? 5 : 3.5, walkBack: walkDur,
-    });
+    // Os oito vendedores das áreas operacionais fazem trajetos de atendimento.
+    // Os dois participantes da sala de reunião permanecem sentados e selecionáveis.
+    if (n < 8) {
+      const e = errands[n];
+      const home = new THREE.Vector2(sx, sz);
+      const dest = new THREE.Vector2(e.dest[0], e.dest[1]);
+      const path = [home, ...(e.via ?? []).map(([x, z]) => new THREE.Vector2(x, z)), dest];
+      const walkDur = Math.max(1.6, pathLen(path) / 1.3);
+      walkers.push({
+        sit, stand: standP.group, legs: standP.legs, sArms: standP.arms, sHead: standP.head,
+        home, dest, destAng: e.ang, kind: e.kind, path,
+        period: 24 + (n * 7 % 23), phase: n * 3.1,
+        walkOut: walkDur, interact: e.kind === 'counter' ? 5 : 3.5, walkBack: walkDur,
+      });
+    }
     n++;
   }
 
@@ -399,7 +463,7 @@ export function buildOffice() {
     seats.forEach((s) => {
       s.arms.forEach((a, i) => { a.rotation.x = -0.28 + Math.sin(t * 11 + s.ph + i * 2) * 0.05; });
       s.head.rotation.y = Math.sin(t * 0.5 + s.ph) * 0.25; s.head.rotation.x = Math.sin(t * 0.9 + s.ph) * 0.05;
-      s.screen.emissiveIntensity = 0.65 + 0.1 * Math.sin(t * 2 + s.ph);
+      if (s.screen) s.screen.emissiveIntensity = 0.65 + 0.1 * Math.sin(t * 2 + s.ph);
     });
     // LEDs do servidor piscando em padrões assíncronos
     server.leds.forEach((led, i) => {
