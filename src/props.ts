@@ -23,7 +23,7 @@ export function buildWorker(seed = 0): Prop {
   const g = new THREE.Group();
   const skin = std(SKINS[Math.floor(hash(seed) * SKINS.length)], 0.8, 0);
   const hatC = HATS[Math.floor(hash(seed + 5) * HATS.length)];
-  const vest = std(hash(seed + 2) > 0.5 ? 0xf5b83d : 0xf26a1b, 0.7);
+  const vest = std(hash(seed + 2) > 0.5 ? 0xe96b2c : 0x7c8591, 0.7);
   const pants = std(0x2b3550, 0.8);
   const boot = std(0x1a2236, 0.7);
   const stripe = std(0xe8eef6, 0.4, 0.3); // faixa refletiva do colete
@@ -227,7 +227,7 @@ function labelSprite(text: string, hex: number): THREE.Sprite {
 export function buildRack(width = 10): THREE.Group {
   const g = new THREE.Group();
   const H = 3.0, depth = 1.0, levels = 3;
-  const upright = std(0x2563c9, 0.5, 0.2), beamM = std(0xf26a1b, 0.5, 0.2), deck = std(0xaeb8ca, 0.6, 0.3), steel = std(0xb9c1ce, 0.3, 0.8), bundle = std(0xc9a26b, 0.85);
+  const upright = std(0x394454, 0.5, 0.2), beamM = std(0xe96b2c, 0.5, 0.2), deck = std(0xaeb8ca, 0.6, 0.3), steel = std(0xb9c1ce, 0.3, 0.8), bundle = std(0xc9a26b, 0.85);
   for (const x of [-width / 2, 0, width / 2]) for (const z of [-depth / 2, depth / 2]) g.add(b(0.14, H, 0.14, upright, x, 0, z));
   for (let l = 0; l < levels; l++) {
     const y = 0.5 + l * (H - 0.6) / (levels - 1);
@@ -265,7 +265,7 @@ function follower(path: [number, number][], speed: number) {
 /** Trabalhador que CAMINHA por uma rota (pernas/braços balançando). */
 export function buildRoamer(path: [number, number][], seed = 0, speed = 1.3): Prop {
   const g = new THREE.Group();
-  const vest = std(hash(seed + 2) > 0.5 ? 0xf5b83d : 0x3b82f6, 0.7);
+  const vest = std(hash(seed + 2) > 0.5 ? 0xe96b2c : 0x7c8591, 0.7);
   const skin = std(SKINS[Math.floor(hash(seed) * SKINS.length)], 0.8, 0);
   const pants = std(0x2b3550, 0.8), boot = std(0x1a2236, 0.7);
   const hatC = HATS[Math.floor(hash(seed + 5) * HATS.length)];
@@ -322,8 +322,8 @@ export function buildWaterCooler(): THREE.Group {
 export function buildCounter(width = 4): THREE.Group {
   const g = new THREE.Group();
   g.add(b(width, 1.05, 0.7, std(0xf4f7fd, 0.5), 0, 0, 0));
-  g.add(b(width + 0.1, 0.08, 0.85, std(0x2563c9, 0.5), 0, 1.05, 0));       // tampo
-  g.add(b(width - 0.3, 0.3, 0.05, std(0x3b82f6, 0.4), 0, 0.55, 0.36));     // frente painel
+  g.add(b(width + 0.1, 0.08, 0.85, std(0x394454, 0.5), 0, 1.05, 0));       // tampo
+  g.add(b(width - 0.3, 0.3, 0.05, std(0xe96b2c, 0.4), 0, 0.55, 0.36));     // frente painel
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
@@ -412,7 +412,7 @@ export function buildWaitChair(color = 0x3b5578): THREE.Group {
 export function buildProductDisplay(color = 0xf26a1b): THREE.Group {
   const g = new THREE.Group();
   g.add(cyl(0.34, 0.75, std(0xe3e9f2, 0.4, 0.2), 0, 0, 0, 24));            // pedestal
-  g.add(b(0.04, 0.02, 0.76, std(0x2563c9, 0.5), 0, 0.751, 0));             // aro no topo (achatado, decorativo)
+  g.add(b(0.04, 0.02, 0.76, std(0x394454, 0.5), 0, 0.751, 0));             // aro no topo (achatado, decorativo)
   const prod = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), std(color, 0.35, 0.5));
   prod.position.y = 0.75 + 0.3; prod.rotation.y = 0.4; g.add(prod);
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
