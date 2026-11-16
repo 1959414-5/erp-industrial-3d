@@ -258,7 +258,7 @@ export function buildOffice() {
   // faixa-logo da marca no topo da parede traseira
   group.add(b(OW, 0.55, 0.09, std(0xf26a1b, 0.6), 0, 3.62, -OD / 2 + 0.06));
   // rótulo COMERCIAL
-  const lbl = labelBoard('COMERCIAL'); lbl.position.set(0, 4.65, -OD / 2 + 0.06); group.add(lbl);
+  const lbl = labelBoard('COMERCIAL'); lbl.scale.set(0.68, 0.68, 1); lbl.position.set(0, 3.42, -OD / 2 + 0.12); group.add(lbl);
 
   // teto removido — bloqueava a visão de cima (overview)
 
@@ -314,12 +314,15 @@ export function buildOffice() {
   // ── SALA 3 — Sala de reunião (x +8.25 a +21.75) ──────────────
   // Tela fixada na parede externa do fundo; a abertura da porta da divisória permanece livre.
   const meetingScreen = buildTV(meetingRoomTexture(), 2.8, 1.58);
-  meetingScreen.group.position.set(15, 2.05, -9.34); group.add(meetingScreen.group); ed('meeting-screen', meetingScreen.group);
+  meetingScreen.group.position.set(15, 2.05, -9.44); group.add(meetingScreen.group); ed('meeting-screen', meetingScreen.group);
   const conference = buildConferenceTable(); conference.position.set(15, 0.12, 0); group.add(conference); ed('conference-table', conference);
   // Seis cadeiras livres; duas posições são ocupadas pelos vendedores que participam da reunião.
   const meetingChairSpots: [number, number, number][] = [
-    [15.5, 1.62, 0], [16.8, 1.62, 0], [13.4, -1.62, Math.PI], [14.8, -1.62, Math.PI],
-    [12.05, 0, -Math.PI / 2], [17.95, 0, Math.PI / 2],
+    // Fileira norte: costas para o fundo, frente voltada ao centro da mesa.
+    [15.5, 1.62, Math.PI], [16.8, 1.62, Math.PI],
+    // Fileira sul: frente voltada para o centro; cabeceiras apontam para o eixo longo.
+    [13.4, -1.62, 0], [14.8, -1.62, 0],
+    [12.05, 0, Math.PI / 2], [17.95, 0, -Math.PI / 2],
   ];
   meetingChairSpots.forEach(([x, z, rotation], i) => {
     const seat = new THREE.Group(); seat.add(buildMeetingChair());
@@ -339,7 +342,7 @@ export function buildOffice() {
     // Sala 2 — Backoffice (2 fileiras × 3 colunas, mais compactas/próximas)
     [-4.2, -3.5], [-4.2, 1.5], [0, -3.5], [0, 1.5], [4.3, -3.5], [4.3, 1.5],
     // Sala 3 — participantes da reunião, um de cada lado da mesa
-    [14, 0.65, 0], [16, -0.65, Math.PI],
+    [14, 0.65, Math.PI], [16, -0.65, 0],
   ];
   // Rotina de cada vendedor: para onde ele caminha periodicamente (sempre dentro da própria
   // sala — nunca atravessa divisórias, evitando qualquer colisão com paredes/objetos).
