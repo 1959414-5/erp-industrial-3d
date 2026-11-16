@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { buildCounter, buildPrinter, buildWaterCooler, buildTV, buildServerRack, buildCabinet,
+import { buildCounter, buildPrinter, buildWaterCooler, buildServerRack, buildCabinet,
   buildSofa, buildCoffeeTable, buildWaitChair } from './props';
 import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
@@ -123,6 +123,25 @@ function buildMeetingChair(): THREE.Group {
     const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.045, 10), metal); wheel.rotation.z = Math.PI / 2; wheel.position.set(Math.cos(angle) * 0.42, 0.055, Math.sin(angle) * 0.42); g.add(wheel);
   }
   g.add(b(0.035, 0.035, 0.035, orange, 0, 0.57, 0.31));
+  return g;
+}
+
+/** Tela plana para a sala de reunião, montada diretamente na parede (sem suporte de TV). */
+function buildMeetingDisplay(): THREE.Group {
+  const g = new THREE.Group();
+  const graphite = std(0x202936, 0.38, 0.35), orange = std(0xe96b2c, 0.42),
+    screen = new THREE.MeshStandardMaterial({ map: meetingRoomTexture(), emissiveMap: meetingRoomTexture(), emissive: 0xffffff, emissiveIntensity: 0.62, roughness: 0.35 });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.62, 1.46, 0.075), graphite);
+  frame.position.y = 0.73; frame.castShadow = true; frame.receiveShadow = true; g.add(frame);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.34), screen);
+  panel.position.set(0, 0.73, 0.041); g.add(panel);
+  const accent = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.035, 0.012), orange);
+  accent.position.set(0, 1.42, 0.044); g.add(accent);
+  // Quatro fixadores curtos mantêm a tela paralela à parede, sem braço articulado visível.
+  for (const x of [-1.02, 1.02]) for (const y of [0.18, 1.28]) {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.045), graphite);
+    bracket.position.set(x, y, -0.055); g.add(bracket);
+  }
   return g;
 }
 
@@ -258,7 +277,7 @@ export function buildOffice() {
   // faixa-logo da marca no topo da parede traseira
   group.add(b(OW, 0.55, 0.09, std(0xf26a1b, 0.6), 0, 3.62, -OD / 2 + 0.06));
   // rótulo COMERCIAL
-  const lbl = labelBoard('COMERCIAL'); lbl.scale.set(0.68, 0.68, 1); lbl.position.set(0, 3.42, -OD / 2 + 0.12); group.add(lbl);
+  const lbl = labelBoard('COMERCIAL'); lbl.scale.set(0.5, 0.5, 1); lbl.position.set(0, 3.42, -OD / 2 + 0.12); group.add(lbl);
 
   // teto removido — bloqueava a visão de cima (overview)
 
@@ -313,15 +332,15 @@ export function buildOffice() {
 
   // ── SALA 3 — Sala de reunião (x +8.25 a +21.75) ──────────────
   // Tela fixada na parede externa do fundo; a abertura da porta da divisória permanece livre.
-  const meetingScreen = buildTV(meetingRoomTexture(), 2.8, 1.58);
-  meetingScreen.group.position.set(15, 2.05, -9.44); group.add(meetingScreen.group); ed('meeting-screen', meetingScreen.group);
+  const meetingScreen = buildMeetingDisplay();
+  meetingScreen.position.set(15, 1.93, -9.38); group.add(meetingScreen); ed('meeting-screen', meetingScreen);
   const conference = buildConferenceTable(); conference.position.set(15, 0.12, 0); group.add(conference); ed('conference-table', conference);
   // Seis cadeiras livres; duas posições são ocupadas pelos vendedores que participam da reunião.
   const meetingChairSpots: [number, number, number][] = [
-    // Fileira norte: costas para o fundo, frente voltada ao centro da mesa.
-    [15.5, 1.62, Math.PI], [16.8, 1.62, Math.PI],
-    // Fileira sul: frente voltada para o centro; cabeceiras apontam para o eixo longo.
-    [13.4, -1.62, 0], [14.8, -1.62, 0],
+    // Duas cadeiras por lateral, alinhadas e voltadas para o centro da mesa.
+    [13.35, 1.78, Math.PI], [16.65, 1.78, Math.PI],
+    [13.35, -1.78, 0], [16.65, -1.78, 0],
+    // Uma cadeira em cada cabeceira, voltada para o eixo longo da mesa.
     [12.05, 0, Math.PI / 2], [17.95, 0, -Math.PI / 2],
   ];
   meetingChairSpots.forEach(([x, z, rotation], i) => {
@@ -337,12 +356,12 @@ export function buildOffice() {
   // Sala 3: 2 participantes sentados à mesa de reunião, sem estações individuais.
   // Cada participante fica voltado para o centro da mesa.
   const positions: [number, number, number?][] = [
-    // Sala 1 — Recepção: lado a lado, atrás do balcão (a TV fica no vão entre as duas mesas)
+    // Sala 1 — Recepção: lado a lado, atrás do balcão
     [-16.3, -8.0, Math.PI], [-13.2, -8.0, Math.PI],
-    // Sala 2 — Backoffice (2 fileiras × 3 colunas, mais compactas/próximas)
+    // Sala 2 — Backoffice (2 fileiras × 3 colunas)
     [-4.2, -3.5], [-4.2, 1.5], [0, -3.5], [0, 1.5], [4.3, -3.5], [4.3, 1.5],
-    // Sala 3 — participantes da reunião, um de cada lado da mesa
-    [14, 0.65, Math.PI], [16, -0.65, 0],
+    // Dois participantes da reunião, posicionados nas laterais longas da mesa.
+    [15, 1.78, 0], [15, -1.78, Math.PI],
   ];
   // Rotina de cada vendedor: para onde ele caminha periodicamente (sempre dentro da própria
   // sala — nunca atravessa divisórias, evitando qualquer colisão com paredes/objetos).
@@ -362,7 +381,8 @@ export function buildOffice() {
   ];
   let n = 0;
   for (const [px, pz, rot = 0] of positions) {
-    const sx = px + 0.95 * Math.sin(rot), sz = pz + 0.95 * Math.cos(rot);
+    const sx = n >= 8 ? px : px + 0.95 * Math.sin(rot);
+    const sz = n >= 8 ? pz : pz + 0.95 * Math.cos(rot);
     const s = new THREE.Group();
     let screen: THREE.MeshStandardMaterial | null = null;
     if (n < 8) {
@@ -383,7 +403,8 @@ export function buildOffice() {
       replaceOfficeVisual(chairRoot, 'officeTaskChair');
     } else {
       // Vendedores 9 e 10 participam das reuniões, sem mesas individuais.
-      s.position.set(sx, 0.12, sz); s.rotation.y = rot; s.add(buildMeetingChair());
+      // A cadeira tem encosto no sentido oposto ao corpo sentado.
+      s.position.set(sx, 0.12, sz); s.rotation.y = rot + Math.PI; s.add(buildMeetingChair());
     }
     group.add(s); sellers.push(s); ed(n < 8 ? `desk-${n}` : `meeting-attendee-${n}`, s);
     const sit = new THREE.Group(); sit.position.set(sx, 0.12, sz); sit.rotation.y = rot;
