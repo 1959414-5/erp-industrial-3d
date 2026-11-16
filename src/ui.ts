@@ -46,7 +46,7 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     b.innerHTML = `<span class="module-icon" aria-hidden="true">${glyph}</span><span class="module-name">${escapeHtml(data.tabs[k].title)}</span>`;
     b.dataset.k = k;
     b.title = data.tabs[k].title;
-    b.onclick = () => { window.location.assign('https://1959414-5.github.io/meu-portfolio/projeto-erp-industrial-3d.html'); };
+    b.onclick = () => select(k);
     tabs.appendChild(b);
   });
 
