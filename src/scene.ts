@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<MachineType, string> = {
 /* ── Câmeras por aba ────────────────────────────────────────────────── */
 const FOCUS: Record<TabKey, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   producao: { pos: new THREE.Vector3(-12, 41, 28), target: new THREE.Vector3(-12, 0.5, -5) },
-  estoque:  { pos: new THREE.Vector3(54, 31, -7),   target: new THREE.Vector3(35, 0.5, -20) },
+  estoque:  { pos: new THREE.Vector3(34.25, 25, 24), target: new THREE.Vector3(34.25, 1.0, -3) },
   comercial:{ pos: new THREE.Vector3(27.25, 25, 33.5), target: new THREE.Vector3(27.25, 0.5, 20.5) },
 };
 const mat = (color: number, rough = 0.85) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.05 });
@@ -627,16 +627,16 @@ export class Factory {
     // Em visão geral, a fábrica inteira fica visível. Reduzimos a resolução de
     // renderização e suspendemos o passe de sombras, que é o custo mais alto nesse enquadramento.
     const cameraDistance = this.camera.position.distanceTo(this.controls.target);
-    const targetPixelRatio = cameraDistance > 95 ? Math.min(devicePixelRatio, 0.75)
-      : cameraDistance > 58 ? Math.min(devicePixelRatio, 0.95)
-        : Math.min(devicePixelRatio, 1.35);
+    const targetPixelRatio = cameraDistance > 85 ? Math.min(devicePixelRatio, 0.7)
+      : cameraDistance > 38 ? Math.min(devicePixelRatio, 0.9)
+        : Math.min(devicePixelRatio, 1.15);
     if (Math.abs(targetPixelRatio - this.currentPixelRatio) > 0.05) {
       this.currentPixelRatio = targetPixelRatio;
       this.renderer.setPixelRatio(targetPixelRatio);
       const rect = this.canvas.parentElement?.getBoundingClientRect() ?? this.canvas.getBoundingClientRect();
       this.renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
     }
-    const overviewMode = cameraDistance > 58;
+    const overviewMode = cameraDistance > 40;
     if (this.shadowMode !== !overviewMode) { this.shadowMode = !overviewMode; this.renderer.shadowMap.enabled = this.shadowMode; }
     if (this.move && !this.cameraDragging) {
       const e = this.move; this.move = null; const h = this.hit(e);
@@ -644,27 +644,28 @@ export class Factory {
       this.canvas.style.cursor = h ? 'pointer' : 'grab'; this.onHover(h, e.clientX, e.clientY);
     }
     if (this.goal) {
-      this.camera.position.lerp(this.goal.pos, 0.12); this.controls.target.lerp(this.goal.target, 0.12);
+      // Transição mais responsiva: reduz a sensação de atraso ao trocar de módulo.
+      this.camera.position.lerp(this.goal.pos, 0.19); this.controls.target.lerp(this.goal.target, 0.19);
       if (this.camera.position.distanceTo(this.goal.pos) < 0.05) this.goal = null;
     }
     if (this.wallMode === 'cutaway') this.updateCutaway();
     this.cartons.forEach((c, i) => { c.position.x = ((t * 1.6 + i * 2.5) % 30) - 20; });
     // Em zoom aberto, animações pequenas não são perceptíveis. Atualizá-las
     // apenas quando a câmera está próxima reduz CPU sem alterar os modelos.
-    if (cameraDistance <= 78) {
+    if (cameraDistance <= 42) {
       this.models.forEach((m, i) => {
-        if (this.camera.position.distanceTo(this.machineGroups[i].position) < 62) m.update(dt, this.statuses[i]);
+        if (this.camera.position.distanceTo(this.machineGroups[i].position) < 42) m.update(dt, this.statuses[i]);
       });
       this.operators.forEach((o) => {
-        if (this.camera.position.distanceTo(o.group.position) < 55) o.update(t);
+        if (this.camera.position.distanceTo(o.group.position) < 38) o.update(t);
       });
       this.markers.forEach((m) => {
-        if (this.camera.position.distanceTo(m.group.position) < 72) m.update(t);
+        if (this.camera.position.distanceTo(m.group.position) < 48) m.update(t);
       });
       this.props.forEach((p) => {
-        if (this.camera.position.distanceTo(p.group.position) < 65) p.update(t);
+        if (this.camera.position.distanceTo(p.group.position) < 42) p.update(t);
       });
-      if (this.camera.position.distanceTo(this.office.group.position) < 58) this.office.update(t);
+      if (this.camera.position.distanceTo(this.office.group.position) < 38) this.office.update(t);
       this.assetMixers.forEach((mixer) => mixer.update(dt));
     }
     if (this.selected) {
