@@ -3,102 +3,244 @@ import type { Dataset, Selection, TabKey } from './data';
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const brl = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(n);
 const num = (n: number, d = 0) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: d }).format(n);
+const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[ch] ?? ch));
+
 const M_STATUS = { run: ['Operando', '#22b573'], idle: ['Parada', '#f5b83d'], down: ['Com falha', '#e5484d'] } as const;
 const S_STATUS = { online: ['Disponível', '#22b573'], busy: ['Em atendimento', '#f26a1b'], away: ['Ausente', '#9aa5b8'] } as const;
 const TYPE_LABEL = { laser: 'Corte a laser', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC', robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita' } as const;
+type LotState = 'empty' | 'critical' | 'full' | 'medium' | 'low';
+const LOT_STYLES: Record<LotState, { label: string; color: string; glyph: string }> = {
+  empty: { label: 'Sem estoque', color: '#9aa5b8', glyph: '—' },
+  critical: { label: 'Abaixo do mínimo', color: '#e5484d', glyph: '!' },
+  full: { label: 'Estoque saudável', color: '#22b573', glyph: '✓' },
+  medium: { label: 'Estoque médio', color: '#f5b83d', glyph: '≈' },
+  low: { label: 'Estoque baixo', color: '#3b82f6', glyph: '↓' },
+};
 
-function lotLevel(occ: number, qty: number, min: number): [string, string] {
-  if (occ < 0.15) return ['Vazio', '#9aa5b8'];
-  if (qty < min) return ['Abaixo do mínimo', '#e5484d'];
-  if (occ > 0.8) return ['Cheio', '#f26a1b'];
-  return occ > 0.5 ? ['Médio', '#f5a25d'] : ['Baixo', '#3b82f6'];
+function lotState(occ: number, qty: number, min: number): LotState {
+  if (occ < 0.15 || qty <= 0) return 'empty';
+  if (qty < min) return 'critical';
+  if (occ > 0.8) return 'full';
+  return occ > 0.5 ? 'medium' : 'low';
+}
+
+function lotDetailName(data: Dataset, index: number): string {
+  const lot = data.lots[index];
+  if (!lot) return 'Posição vazia';
+  return `Lote ${lot.id} · ${lot.material} · ${num(lot.qty)} un · ${lot.location}`;
 }
 
 export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s: Selection | null) => void) {
   const tabs = $('tabs'), left = $('left'), right = $('right'), bottom = $('bottom'), tip = $('tip'), card = $('card');
+  let currentTab: TabKey = 'producao';
+  let lotFilter: 'all' | 'critical' | 'low' | 'empty' = 'all';
+  let selected: Selection | null = null;
+
   (Object.keys(data.tabs) as TabKey[]).forEach((k) => {
-    const b = document.createElement('button'); b.textContent = data.tabs[k].title; b.dataset.k = k; b.onclick = () => select(k); tabs.appendChild(b);
+    const b = document.createElement('button');
+    b.textContent = data.tabs[k].title;
+    b.dataset.k = k;
+    b.onclick = () => select(k);
+    tabs.appendChild(b);
   });
 
-  const heat = (v: number) => (v < 0.15 ? '#e8edf6' : v > 0.8 ? '#f26a1b' : v > 0.5 ? '#f5b783' : '#aab3c2');
+  const statusForLot = (index: number): LotState => {
+    const lot = data.lots[index];
+    return lotState(data.occupancy[index] ?? 0, lot?.qty ?? 0, lot?.minQty ?? 0);
+  };
+
   function bottomFor(k: TabKey) {
     if (k === 'producao') {
-      const oee = Math.round(data.machines.reduce((s, m) => s + m.oee, 0) / data.machines.length);
-      bottom.innerHTML = `<div style="flex:1"><h3>Máquinas · OEE médio ${oee}%</h3><div class="chips">${data.machines.map((m, i) =>
-        `<button class="chip" data-k="machine" data-i="${i}"><span class="dot" style="background:${M_STATUS[m.status][1]}"></span>${m.name}<b>${m.oee}%</b></button>`).join('')}</div></div>`;
+      const oee = Math.round(data.machines.reduce((sum, machine) => sum + machine.oee, 0) / Math.max(1, data.machines.length));
+      bottom.innerHTML = `<div class="bottom-content">
+        <div class="bottom-heading"><div><span class="panel-overline">VISÃO OPERACIONAL</span><h3>Máquinas · OEE médio ${oee}%</h3></div><span class="bottom-count">${data.machines.length} equipamentos</span></div>
+        <div class="chips">${data.machines.map((m, i) =>
+          `<button class="chip" data-k="machine" data-i="${i}"><span class="dot" style="background:${M_STATUS[m.status][1]}"></span>${escapeHtml(m.name)}<b>${m.oee}%</b></button>`).join('')}</div>
+      </div>`;
     } else if (k === 'estoque') {
-      const cnt = [0, 0, 0, 0]; data.occupancy.forEach((v) => { cnt[v < 0.15 ? 3 : v > 0.8 ? 0 : v > 0.5 ? 1 : 2]++; });
-      bottom.innerHTML = `<div style="flex:1"><h3>Lotes de chapas · ocupação</h3><div class="heat">${data.occupancy.map((v, i) =>
-        `<button class="cell" data-k="lot" data-i="${i}" title="${data.lots[i]?.id ?? ''}" style="background:${heat(v)}"></button>`).join('')}</div></div>
-        <div class="legend">${[['Cheio', '#f26a1b'], ['Médio', '#f5b783'], ['Baixo', '#aab3c2'], ['Vazio', '#e8edf6']].map(([t, c], i) =>
-        `<div><span class="dot" style="background:${c}"></span>${t}: <b>${cnt[i]}</b></div>`).join('')}</div>`;
+      const counts: Record<LotState, number> = { empty: 0, critical: 0, full: 0, medium: 0, low: 0 };
+      data.lots.forEach((_lot, i) => { counts[statusForLot(i)] += 1; });
+      const lotRows = data.lots.map((lot, i) => ({ lot, i, state: statusForLot(i), occ: data.occupancy[i] ?? 0 }))
+        .filter((item) => lotFilter === 'all'
+          || (lotFilter === 'critical' && item.state === 'critical')
+          || (lotFilter === 'low' && (item.state === 'low' || item.state === 'medium'))
+          || (lotFilter === 'empty' && item.state === 'empty'));
+      const filters = [
+        ['all', 'Todos', data.lots.length],
+        ['critical', 'Críticos', counts.critical],
+        ['low', 'Atenção', counts.low + counts.medium],
+        ['empty', 'Vazios', counts.empty],
+      ] as const;
+      bottom.innerHTML = `<div class="bottom-content stock-bottom">
+        <div class="bottom-heading"><div><span class="panel-overline">MAPA DE ARMAZENAGEM</span><h3>Lotes de chapas · ocupação</h3></div><span class="bottom-count">${lotRows.length} de ${data.lots.length} lotes</span></div>
+        <div class="stock-toolbar">
+          <div class="stock-filters">${filters.map(([key, label, count]) =>
+            `<button class="stock-filter ${lotFilter === key ? 'on' : ''}" data-lot-filter="${key}" aria-pressed="${lotFilter === key}">${label}<b>${count}</b></button>`).join('')}</div>
+          <div class="stock-legend">
+            <span><i style="background:${LOT_STYLES.full.color}"></i> Saudável</span>
+            <span><i style="background:${LOT_STYLES.medium.color}"></i> Médio</span>
+            <span><i style="background:${LOT_STYLES.critical.color}"></i> Crítico</span>
+            <span><i style="background:${LOT_STYLES.empty.color}"></i> Vazio</span>
+          </div>
+        </div>
+        <div class="heat" aria-label="Selecione um lote para localizar na fábrica 3D">${lotRows.length
+          ? lotRows.map(({ lot, i, state, occ }) =>
+            `<button class="cell state-${state} ${selected?.kind === 'lot' && selected.index === i ? 'is-selected' : ''}" data-k="lot" data-i="${i}"
+              title="${escapeHtml(lotDetailName(data, i))}" aria-label="${escapeHtml(lotDetailName(data, i))}"
+              style="--lot-fill:${Math.round(Math.max(0, Math.min(1, occ)) * 100)}%"><span>${i + 1}</span></button>`).join('')
+          : '<div class="empty-filter">Nenhum lote corresponde a este filtro.</div>'}</div>
+        <div class="stock-hint">Selecione um lote para abrir os detalhes e localizar sua posição na fábrica.</div>
+      </div>`;
     } else {
-      const goal = Math.round(data.sellers.reduce((s, v) => s + v.goalPct, 0) / data.sellers.length);
-      bottom.innerHTML = `<div style="flex:1"><h3>Vendedores · meta média ${goal}%</h3><div class="chips">${data.sellers.map((v, i) =>
-        `<button class="chip" data-k="seller" data-i="${i}"><span class="dot" style="background:${S_STATUS[v.status][1]}"></span>${v.name.split(' ')[0]}<b>${v.goalPct}%</b></button>`).join('')}</div></div>`;
+      const goal = Math.round(data.sellers.reduce((sum, seller) => sum + seller.goalPct, 0) / Math.max(1, data.sellers.length));
+      bottom.innerHTML = `<div class="bottom-content">
+        <div class="bottom-heading"><div><span class="panel-overline">DESEMPENHO COMERCIAL</span><h3>Vendedores · meta média ${goal}%</h3></div><span class="bottom-count">${data.sellers.length} vendedores</span></div>
+        <div class="chips">${data.sellers.map((v, i) =>
+          `<button class="chip" data-k="seller" data-i="${i}"><span class="dot" style="background:${S_STATUS[v.status][1]}"></span>${escapeHtml(v.name.split(' ')[0])}<b>${v.goalPct}%</b></button>`).join('')}</div>
+      </div>`;
     }
   }
+
   bottom.onclick = (e) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-k]'); if (!el) return;
-    onSelect({ kind: el.dataset.k as Selection['kind'], index: Number(el.dataset.i) });
+    const target = e.target as HTMLElement;
+    const filter = target.closest<HTMLButtonElement>('[data-lot-filter]');
+    if (filter) {
+      lotFilter = filter.dataset.lotFilter as typeof lotFilter;
+      bottomFor('estoque');
+      return;
+    }
+    const el = target.closest<HTMLElement>('[data-k][data-i]');
+    if (!el) return;
+    const kind = el.dataset.k as Selection['kind'];
+    const index = Number(el.dataset.i);
+    if (!Number.isInteger(index) || index < 0) return;
+    onSelect({ kind, index } as Selection);
   };
+
+  function kpiGlyph(label: string): string {
+    const value = label.toLowerCase();
+    if (value.includes('valor') || value.includes('faturamento') || value.includes('ticket')) return 'R$';
+    if (value.includes('pedido') || value.includes('ordem')) return '▤';
+    if (value.includes('estoque') || value.includes('produto')) return '▦';
+    if (value.includes('refugo') || value.includes('falha') || value.includes('abaixo')) return '!';
+    if (value.includes('aprovação') || value.includes('cumprimento')) return '✓';
+    return '◈';
+  }
 
   function select(k: TabKey) {
+    currentTab = k;
+    if (k !== 'estoque') lotFilter = 'all';
     tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.k === k));
-    const t = data.tabs[k];
-    left.className = 'glass' + (t.kpis.length > 4 ? ' two' : '');
-    left.innerHTML = t.kpis.map((x) => `<div class="kpi"><small>${x.label}</small><b>${x.value}</b>${
-      x.delta === undefined ? '' : `<i class="${x.delta >= 0 ? 'up' : 'down'}">${x.delta >= 0 ? '▲' : '▼'} ${num(Math.abs(x.delta), 1)}%</i>`}</div>`).join('');
-    const max = Math.max(...t.series.items.map((i) => i.value));
-    right.innerHTML = `<h3>${t.series.title}</h3><div class="bars">${t.series.items
-      .map((i) => `<div class="bar"><span style="height:0" data-h="${(i.value / max) * 100}"></span>${i.label}</div>`).join('')}</div>`;
-    requestAnimationFrame(() => right.querySelectorAll<HTMLElement>('span[data-h]').forEach((s) => { s.style.height = s.dataset.h + '%'; }));
-    bottomFor(k); onTab(k);
+    const tab = data.tabs[k];
+    left.className = 'glass';
+    left.innerHTML = `<div class="panel-heading"><div><span class="panel-overline">RESUMO OPERACIONAL</span><h3>Indicadores</h3></div><button class="panel-collapse" data-collapse="left" aria-label="Recolher indicadores" aria-expanded="true">−</button></div>
+      <div class="kpi-grid">${tab.kpis.map((item, index) => `<article class="kpi" style="--kpi-index:${index}">
+        <span class="kpi-icon">${escapeHtml(kpiGlyph(item.label))}</span>
+        <div class="kpi-copy"><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.value)}</b>
+        ${item.delta === undefined ? '' : `<i class="${item.delta >= 0 ? 'up' : 'down'}">${item.delta >= 0 ? '▲' : '▼'} ${num(Math.abs(item.delta), 1)}%</i>`}</div>
+      </article>`).join('')}</div>`;
+
+    const maxValue = Math.max(1, ...tab.series.items.map((item) => item.value));
+    right.innerHTML = `<div class="panel-heading"><div><span class="panel-overline">INDICADORES NO TEMPO</span><h3>${escapeHtml(tab.series.title)}</h3></div><button class="panel-collapse" data-collapse="right" aria-label="Recolher gráfico" aria-expanded="true">−</button></div>
+      <div class="bars">${tab.series.items.map((item, index) => {
+        const percent = Math.max(0, Math.min(100, (item.value / maxValue) * 100));
+        return `<div class="bar-row"><div class="bar-meta"><span>${escapeHtml(item.label)}</span><b>${num(item.value)}</b></div>
+          <div class="bar-track"><span class="bar-fill tone-${index % 4}" style="width:${percent}%"></span></div></div>`;
+      }).join('')}</div>`;
+    bottomFor(k);
+    onTab(k);
   }
 
-  const row = (r: [string, string][]) => `<div class="rows">${r.map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('')}</div>`;
-  const meter = (label: string, pct: number, c: string) => `<div class="mlabel"><span>${label}</span><b>${num(pct)}%</b></div><div class="meter"><span style="width:${Math.min(pct, 100)}%;background:${c}"></span></div>`;
-
-  function detail(s: Selection) {
-    if (s.kind === 'machine') {
-      const m = data.machines[s.index], [st, c] = M_STATUS[m.status];
-      return { kicker: m.type ? TYPE_LABEL[m.type] : 'Máquina', title: m.name, st, c, body: row([
-        ...(m.order ? [['Ordem atual', m.order] as [string, string]] : []),
-        ...(m.producedToday !== undefined ? [['Produzido hoje', num(m.producedToday) + ' un'] as [string, string]] : []),
-        ...(m.scrapPct !== undefined ? [['Refugo', num(m.scrapPct, 1) + '%'] as [string, string]] : [])]) + meter('OEE', m.oee, c) };
-    }
-    if (s.kind === 'lot') {
-      const l = data.lots[s.index], occ = data.occupancy[s.index] ?? 0, [st, c] = lotLevel(occ, l.qty, l.minQty);
-      return { kicker: 'Lote de chapas', title: l.id, st, c, body: row([['Material', l.material], ['Espessura', num(l.thickness, 2) + ' mm'], ['Dimensão', l.size],
-        ['Chapas', num(l.qty) + ' un'], ['Peso', num(l.weightKg) + ' kg'], ['Valor estimado', brl(l.value)], ['Estoque mínimo', num(l.minQty) + ' un'], ['Local', l.location]]) + meter('Ocupação', occ * 100, c) };
-    }
-    const v = data.sellers[s.index], [st, c] = S_STATUS[v.status];
-    return { kicker: 'Vendedor(a)', title: v.name, st, c, body: row([['Faturamento', brl(v.revenue)], ['Pedidos', num(v.orders)], ['Em aberto', num(v.openOrders)],
-      ['Ticket médio', brl(v.revenue / Math.max(v.orders, 1))], ['Principal cliente', v.topClient]]) + meter('Meta do período', v.goalPct, v.goalPct >= 100 ? '#22b573' : '#f26a1b') };
-  }
-
-  // posição vazia = lote sem dados (o pátio 3D tem mais posições do que lotes cadastrados)
-  const isEmpty = (s: Selection) => s.kind === 'lot' && !data.lots[s.index];
-  const name = (s: Selection) => {
-    if (isEmpty(s)) return 'Posição vazia';
-    return (s.kind === 'machine' ? data.machines[s.index]?.name : s.kind === 'lot' ? `Lote ${data.lots[s.index]?.id} · ${data.lots[s.index]?.material}` : data.sellers[s.index]?.name) ?? '';
+  left.onclick = (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-collapse]');
+    if (!button) return;
+    const target = button.dataset.collapse === 'left' ? left : right;
+    const collapsed = target.classList.toggle('collapsed');
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.setAttribute('aria-label', collapsed ? 'Expandir painel' : 'Recolher painel');
+    button.textContent = collapsed ? '+' : '−';
   };
+  right.onclick = (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-collapse]');
+    if (!button) return;
+    const target = button.dataset.collapse === 'left' ? left : right;
+    const collapsed = target.classList.toggle('collapsed');
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.setAttribute('aria-label', collapsed ? 'Expandir gráfico' : 'Recolher gráfico');
+    button.textContent = collapsed ? '+' : '−';
+  };
+
+  const row = (items: [string, string][]) => `<div class="rows">${items.map(([label, value]) => `<span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>`).join('')}</div>`;
+  const meter = (label: string, pct: number, color: string) => `<div class="mlabel"><span>${escapeHtml(label)}</span><b>${num(pct)}%</b></div><div class="meter"><span style="width:${Math.max(0, Math.min(pct, 100))}%;background:${color}"></span></div>`;
+
+  function detail(selection: Selection) {
+    if (selection.kind === 'machine') {
+      const machine = data.machines[selection.index], [status, color] = M_STATUS[machine.status];
+      return { kicker: machine.type ? TYPE_LABEL[machine.type] : 'Máquina', title: machine.name, status, color, body: row([
+        ...(machine.order ? [['Ordem atual', machine.order] as [string, string]] : []),
+        ...(machine.producedToday !== undefined ? [['Produzido no período', num(machine.producedToday) + ' un'] as [string, string]] : []),
+        ...(machine.scrapPct !== undefined ? [['Refugo', num(machine.scrapPct, 1) + '%'] as [string, string]] : []),
+      ]) + meter('OEE estimado', machine.oee, color) };
+    }
+    if (selection.kind === 'lot') {
+      const lot = data.lots[selection.index];
+      const occ = data.occupancy[selection.index] ?? 0;
+      const state = LOT_STYLES[statusForLot(selection.index)];
+      return { kicker: 'Lote de chapas', title: lot.id, status: state.label, color: state.color, body: row([
+        ['Material', lot.material], ['Espessura', num(lot.thickness, 2) + ' mm'], ['Dimensão', lot.size],
+        ['Chapas', num(lot.qty) + ' un'], ['Peso', num(lot.weightKg) + ' kg'], ['Valor estimado', brl(lot.value)],
+        ['Estoque mínimo', num(lot.minQty) + ' un'], ['Local', lot.location],
+      ]) + meter('Ocupação', occ * 100, state.color) };
+    }
+    const seller = data.sellers[selection.index], [status, color] = S_STATUS[seller.status];
+    return { kicker: 'Vendedor(a)', title: seller.name, status, color, body: row([
+      ['Faturamento', brl(seller.revenue)], ['Pedidos', num(seller.orders)], ['Em aberto', num(seller.openOrders)],
+      ['Ticket médio', brl(seller.revenue / Math.max(seller.orders, 1))], ['Principal cliente', seller.topClient],
+    ]) + meter('Meta do período', seller.goalPct, seller.goalPct >= 100 ? '#22b573' : '#f26a1b') };
+  }
+
+  const isEmpty = (selection: Selection) => selection.kind === 'lot' && !data.lots[selection.index];
+  const name = (selection: Selection) => {
+    if (isEmpty(selection)) return 'Posição vazia';
+    if (selection.kind === 'machine') return data.machines[selection.index]?.name ?? 'Máquina';
+    if (selection.kind === 'lot') return lotDetailName(data, selection.index);
+    return data.sellers[selection.index]?.name ?? 'Vendedor(a)';
+  };
+
+  function paintSelected() {
+    bottom.querySelectorAll<HTMLElement>('[data-k][data-i]').forEach((el) => {
+      const sameItem = selected?.kind === el.dataset.k && selected?.index === Number(el.dataset.i);
+      el.classList.toggle('is-selected', Boolean(sameItem));
+    });
+  }
+
   return {
     select,
-    showTip(s: Selection | null, x: number, y: number) {
-      if (!s) { tip.style.display = 'none'; return; }
-      tip.style.display = 'block'; tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.textContent = name(s);
+    showTip(selection: Selection | null, x: number, y: number) {
+      if (!selection) { tip.style.display = 'none'; return; }
+      tip.style.display = 'block';
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      tip.textContent = name(selection);
     },
-    pin(s: Selection | null) {
-      if (!s || isEmpty(s)) { card.style.display = 'none'; return; }
-      const d = detail(s);
-      card.innerHTML = `<button class="x" aria-label="Fechar">×</button><small>${d.kicker}</small><h4>${d.title}</h4><span class="st" style="background:${d.c}22;color:${d.c}">${d.st}</span>${d.body}`;
-      card.querySelector('.x')!.addEventListener('click', () => onSelect(null)); card.style.display = 'block'; tip.style.display = 'none';
+    pin(selection: Selection | null) {
+      selected = selection;
+      paintSelected();
+      if (!selection || isEmpty(selection)) { card.style.display = 'none'; return; }
+      const detailData = detail(selection);
+      card.innerHTML = `<button class="x" aria-label="Fechar">×</button><small>${escapeHtml(detailData.kicker)}</small><h4>${escapeHtml(detailData.title)}</h4>
+        <span class="st" style="background:${detailData.color}22;color:${detailData.color}">${escapeHtml(detailData.status)}</span>${detailData.body}`;
+      card.querySelector('.x')!.addEventListener('click', () => onSelect(null));
+      card.style.display = 'block';
+      tip.style.display = 'none';
     },
     place(x: number, y: number, visible: boolean) {
       if (card.style.display !== 'block') return;
       card.style.visibility = visible ? 'visible' : 'hidden';
-      card.style.left = Math.min(Math.max(x, 125), innerWidth - 125) + 'px'; card.style.top = Math.max(y - 12, card.offsetHeight + 12) + 'px';
+      card.style.left = Math.min(Math.max(x, 125), innerWidth - 125) + 'px';
+      card.style.top = Math.max(y - 12, card.offsetHeight + 12) + 'px';
     },
   };
 }
