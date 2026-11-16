@@ -16,6 +16,7 @@ export const INDUSTRIAL_ASSETS = {
   sheetRack: 'https://cdn.3dassets.dev/assets/27761/v1/model.glb',
   forklift: 'https://cdn.3dassets.dev/assets/27768/v1/model.glb',
   steelPallet: 'https://cdn.3dassets.dev/assets/27758/v1/model.glb',
+  roboticWeldingCell: 'https://files.innerscene.com/library/robotic-welding-cell-with-positioner-safety-fencing-and-ligh-f7235945/5eee2637fa98403e6949/robotic-welding-cell-with-positioner-safety-fencing-and-ligh.glb',
 } as const;
 
 export type IndustrialAssetKey = keyof typeof INDUSTRIAL_ASSETS;
@@ -82,8 +83,11 @@ export async function loadIndustrialAsset(key: IndustrialAssetKey): Promise<Indu
   const scene = source.scene.clone(true);
   applyIndustrialPalette(scene);
 
-  // GLB assets are authored in metres with +Y up and the origin on the floor.
-  // Correct the tiny source-pivot offsets without changing their real-world scale.
+  // A célula de solda veio de CAD com Z-up; converte para o Y-up do Three.js.
+  // Os demais modelos deste pacote já usam +Y up.
+  if (key === 'roboticWeldingCell') scene.rotation.x = -Math.PI / 2;
+
+  // Corrige pequenos deslocamentos do pivô na vertical, sem alterar a escala real.
   const bounds = new THREE.Box3().setFromObject(scene);
   if (Number.isFinite(bounds.min.y) && Math.abs(bounds.min.y) > 0.0001) {
     scene.position.y -= bounds.min.y;
