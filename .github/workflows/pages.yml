@@ -1,6 +1,6 @@
 # Publica o painel (front estático) no GitHub Pages a cada push na main.
-# API opcional: defina a variável de repositório API_URL (Settings > Secrets and variables > Actions > Variables),
-# ex.: https://minha-api.up.railway.app — sem ela, o painel funciona com dados de exemplo/snapshot e o motor de IA local.
+# API obrigatória: defina a variável de repositório API_URL (Settings > Secrets and variables > Actions > Variables),
+# ex.: https://minha-api.onrender.com — sem ela, a fábrica permanece bloqueada na tela de conexão.
 name: Deploy Pages
 on:
   push:
