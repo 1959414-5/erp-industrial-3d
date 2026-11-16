@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// Grade 5×7 de paletes com chapas — posição e espaçamento do layout de referência.
+// Grade 6×7 de paletes com chapas — posição e espaçamento do layout de referência.
 const COLS = 6, ROWS = 7, MAX = 18, T = 0.07, GAP = 0.012, BASE = 0.16;
 const SPX = 4.5, SPZ = 3.0;
 const STEEL = [0xaab3c2, 0xb9c1ce, 0x8f9aab, 0xc4cbd6];
@@ -30,8 +30,14 @@ export class SheetLots {
       const x = this.origin.x + col * SPX, z = this.origin.z + row * SPZ;
       const layers = v < 0.15 ? 0 : Math.max(1, Math.round(v * MAX));
       d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); d.position.set(x, BASE / 2, z); d.updateMatrix(); this.pallets.setMatrixAt(i, d.matrix);
-      const steel = STEEL[Math.floor(hash(i) * STEEL.length)];
       const state = states[i];
+      const palletTone = state === 'critical' ? 0xffb9bb
+        : state === 'empty' ? 0xc3cbd6
+          : state === 'full' ? 0xb6dcb9
+            : state === 'medium' ? 0xf3d69a
+              : state === 'low' ? 0xb8d0ee : 0xffffff;
+      this.pallets.setColorAt(i, c.setHex(palletTone));
+      const steel = STEEL[Math.floor(hash(i) * STEEL.length)];
       const tag = state === 'critical' ? 0xe5484d
         : state === 'empty' ? 0x9aa5b8
           : state === 'full' ? 0x22b573
@@ -53,6 +59,7 @@ export class SheetLots {
     }
     for (const m of [this.pallets, this.sheets, this.straps]) m.instanceMatrix.needsUpdate = true;
     if (this.sheets.instanceColor) this.sheets.instanceColor.needsUpdate = true;
+    if (this.pallets.instanceColor) this.pallets.instanceColor.needsUpdate = true;
   }
 
   center(i: number) { return new THREE.Vector3(this.origin.x + (i % COLS) * SPX, 0, this.origin.z + Math.floor(i / COLS) * SPZ); }
