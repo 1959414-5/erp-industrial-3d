@@ -68,7 +68,8 @@ export class Factory {
 
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // Reduz o custo de rasterização sem perder nitidez perceptível durante a navegação.
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.camera.position.copy(FOCUS.producao.pos);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -102,7 +103,8 @@ export class Factory {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 0.98;
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0xc4cbd4, 1.05));
     const sun = new THREE.DirectionalLight(0xfff7f0, 1.45); sun.position.set(-30, 52, 36); sun.castShadow = true;
-    sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -64, right: 64, top: 50, bottom: -50, near: 1, far: 200 });
+    // 2048² mantém sombras definidas com custo de GPU bem menor que 4096².
+    sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -64, right: 64, top: 50, bottom: -50, near: 1, far: 200 });
     sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.035; sun.shadow.radius = 3.5; this.scene.add(sun);
     const fill = new THREE.DirectionalLight(0xe7ebf0, 0.35); fill.position.set(32, 28, -22); this.scene.add(fill);
   }
