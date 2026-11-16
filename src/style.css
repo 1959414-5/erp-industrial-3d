@@ -198,3 +198,5 @@ body.app-ready #scene,body.app-ready #ui{opacity:1;visibility:visible}
   .connection-live-dot,.connection-spinner{animation:none}
   .connection-screen,#scene,#ui{transition:none}
 }
+
+.connection-error[hidden]{display:none!important}
