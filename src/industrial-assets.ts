@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
  */
 export const INDUSTRIAL_ASSETS = {
   cnc: 'https://cdn.3dassets.dev/assets/27732/v1/model.glb',
+  plasmaCutter: 'https://cdn.3dassets.dev/assets/37945/v1/model.glb',
   pressBrake: 'https://cdn.3dassets.dev/assets/27731/v1/model.glb',
   bandSaw: 'https://cdn.3dassets.dev/assets/27726/v1/model.glb',
   guillotine: 'https://cdn.3dassets.dev/assets/27733/v1/model.glb',
