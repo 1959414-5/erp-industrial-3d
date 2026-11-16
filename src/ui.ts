@@ -137,8 +137,8 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     left.className = 'glass';
     left.innerHTML = `<div class="panel-heading"><div><span class="panel-overline">RESUMO OPERACIONAL</span><h3>Indicadores</h3></div><button class="panel-collapse" data-collapse="left" aria-label="Recolher indicadores" aria-expanded="true">−</button></div>
       <div class="kpi-grid">${tab.kpis.map((item, index) => `<article class="kpi" style="--kpi-index:${index}">
-        <span class="kpi-icon">${escapeHtml(kpiGlyph(item.label))}</span>
-        <div class="kpi-copy"><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.value)}</b>
+        <div class="kpi-head"><span class="kpi-icon">${escapeHtml(kpiGlyph(item.label))}</span><small>${escapeHtml(item.label)}</small></div>
+        <div class="kpi-value-line"><b class="kpi-value" title="${escapeHtml(item.value)}">${escapeHtml(item.value)}</b>
         ${item.delta === undefined ? '' : `<i class="${item.delta >= 0 ? 'up' : 'down'}">${item.delta >= 0 ? '▲' : '▼'} ${num(Math.abs(item.delta), 1)}%</i>`}</div>
       </article>`).join('')}</div>`;
 
