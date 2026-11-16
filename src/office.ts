@@ -13,8 +13,8 @@ const cyl = (r: number, h: number, m: THREE.Material, x = 0, y = 0, z = 0, s = 1
 function plant(x: number, z: number): THREE.Group {
   const p = new THREE.Group();
   p.add(cyl(0.22, 0.44, std(0xd4dcea, 0.7), x, 0, z, 16));
-  const f1 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), std(0x3f9d5a, 0.85)); f1.position.set(x, 1.02, z);
-  const f2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), std(0x4fb06a, 0.85)); f2.position.set(x + 0.2, 1.32, z - 0.08);
+  const f1 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), std(0x7c8591, 0.85)); f1.position.set(x, 1.02, z);
+  const f2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), std(0x9aa1aa, 0.85)); f2.position.set(x + 0.2, 1.32, z - 0.08);
   p.add(f1, f2); return p;
 }
 /** Plaquinha de texto. */
@@ -25,14 +25,14 @@ function labelBoard(txt: string): THREE.Mesh {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.64), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
 }
-const SHIRTS = [0x3b82f6, 0xf26a1b, 0x22b573, 0x7c5cfc, 0x1f2a44, 0xe5484d, 0xf5b83d, 0x14b8a6, 0x8b5cf6, 0xec4899];
+const SHIRTS = [0xe96b2c, 0x394454, 0x7c8591, 0x394454, 0xe96b2c, 0x7c8591, 0x394454, 0xe96b2c, 0x7c8591, 0x394454];
 const SKINS  = [0xf1c9a5, 0xd9a37a, 0xa8714a, 0x7a4b2e];
 
 function dashboardTexture() {
   const cv = document.createElement('canvas'); cv.width = 160; cv.height = 100; const g = cv.getContext('2d')!;
   g.fillStyle = '#f4f7fc'; g.fillRect(0, 0, 160, 100); g.fillStyle = '#1f2a44'; g.fillRect(0, 0, 160, 12);
-  [38, 62, 48, 80, 58, 72].forEach((h, i) => { g.fillStyle = i % 2 ? '#3b82f6' : '#f26a1b'; g.fillRect(12 + i * 14, 92 - h, 9, h); });
-  g.strokeStyle = '#22b573'; g.lineWidth = 2; g.beginPath(); g.moveTo(104, 70); [[116, 56], [128, 62], [140, 40], [152, 46]].forEach(([x, y]) => g.lineTo(x, y)); g.stroke();
+  [38, 62, 48, 80, 58, 72].forEach((h, i) => { g.fillStyle = i % 2 ? '#394454' : '#e96b2c'; g.fillRect(12 + i * 14, 92 - h, 9, h); });
+  g.strokeStyle = '#394454'; g.lineWidth = 2; g.beginPath(); g.moveTo(104, 70); [[116, 56], [128, 62], [140, 40], [152, 46]].forEach(([x, y]) => g.lineTo(x, y)); g.stroke();
   g.fillStyle = '#cbd5e6'; for (let i = 0; i < 4; i++) g.fillRect(104, 24 + i * 7, 48, 3);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
@@ -42,7 +42,7 @@ function showroomTexture() {
   g.fillStyle = '#12182a'; g.fillRect(0, 0, 160, 100);
   g.fillStyle = '#f26a1b'; g.fillRect(0, 0, 160, 10);
   g.fillStyle = '#fff'; g.font = 'bold 9px Inter, Arial'; g.textAlign = 'center'; g.fillText('CATÁLOGO · DESTAQUES', 80, 7.5);
-  const colors = ['#3b82f6', '#22b573', '#7c5cfc'];
+  const colors = ['#e96b2c', '#394454', '#7c8591'];
   for (let i = 0; i < 3; i++) {
     const x = 10 + i * 50;
     g.fillStyle = '#1f2a44'; g.fillRect(x, 18, 42, 58);
@@ -146,15 +146,15 @@ export function buildOffice() {
   const editables: { id: string; object: THREE.Object3D }[] = [];
   const ed = (id: string, object: THREE.Object3D) => editables.push({ id: `office-${id}`, object });
   const tex = dashboardTexture(), white = std(0xf7f9fd, 0.5), dark = std(0x2b3550, 0.5, 0.3),
-        gray = std(0xaeb8ca, 0.5, 0.4), chair = std(0x2563c9, 0.7);
+        gray = std(0x9aa1aa, 0.5, 0.4), chair = std(0x394454, 0.7);
 
   const OW = 43.5, OD = 19.0;
 
   // piso
-  group.add(b(OW, 0.12, OD, std(0xe3eaf6, 0.95), 0, 0, 0));
+  group.add(b(OW, 0.12, OD, std(0xdfe2e6, 0.95), 0, 0, 0));
 
   // ── vidros e paredes ──────────────────────────────────────────
-  const glassW = new THREE.MeshStandardMaterial({ color: 0x9ec5ff, transparent: true, opacity: 0.45, depthWrite: false });
+  const glassW = new THREE.MeshStandardMaterial({ color: 0xcbd0d6, transparent: true, opacity: 0.38, depthWrite: false });
   const solidW = std(0xe2e8f0, 0.7);
   const aluFrame = std(0x18181b, 0.35, 0.65);
 
@@ -189,7 +189,7 @@ export function buildOffice() {
   // teto removido — bloqueava a visão de cima (overview)
 
   // tapete sob as estações (sala 2, a mais ampla)
-  group.add(b(14, 0.03, 15, std(0xdfe7f3, 0.95), 0.25, 0.12, 0));
+  group.add(b(14, 0.03, 15, std(0xe2e4e7, 0.95), 0.25, 0.12, 0));
 
   // ── plantas nos cantos ────────────────────────────────────────
   group.add(plant(-20.5, -8.5), plant(20.5, -8.5), plant(-20.5, 8.5), plant(20.5, 8.5));
@@ -207,9 +207,9 @@ export function buildOffice() {
   // armário de arquivos
   const cabR = buildCabinet(0.9, 1.7, 0.5); cabR.position.set(-9.6, 0.12, -8.9); group.add(cabR); ed('cabinet-reception', cabR);
   // sofá + mesinha + 2 cadeiras — área de espera no canto frontal
-  const sofa = buildSofa(1.9, 0x3b5578); sofa.position.set(-18.6, 0.12, 4.6); sofa.rotation.y = Math.PI / 2; group.add(sofa); ed('sofa', sofa);
+  const sofa = buildSofa(1.9, 0x394454); sofa.position.set(-18.6, 0.12, 4.6); sofa.rotation.y = Math.PI / 2; group.add(sofa); ed('sofa', sofa);
   const table = buildCoffeeTable(); table.position.set(-17.0, 0.12, 4.6); group.add(table); ed('coffee-table', table);
-  const wc1 = buildWaitChair(0x3b5578); wc1.position.set(-15.6, 0.12, 2.9); wc1.rotation.y = -Math.PI / 2; group.add(wc1); ed('waitchair-1', wc1);
+  const wc1 = buildWaitChair(0x394454); wc1.position.set(-15.6, 0.12, 2.9); wc1.rotation.y = -Math.PI / 2; group.add(wc1); ed('waitchair-1', wc1);
   const wc2 = buildWaitChair(0x3b5578); wc2.position.set(-15.6, 0.12, 6.3); wc2.rotation.y = -Math.PI / 2; group.add(wc2); ed('waitchair-2', wc2);
   // credência baixa no canto traseiro-esquerdo (preenche o vazio perto da entrada)
   const credenza = buildCabinet(1.6, 1.0, 0.45); credenza.position.set(-20.3, 0.12, -6.5); group.add(credenza); ed('credenza-reception', credenza);
@@ -228,7 +228,7 @@ export function buildOffice() {
   const cabB2 = buildCabinet(0.9, 1.7, 0.5); cabB2.position.set(2.9, 0.12, -8.9); group.add(cabB2); ed('cabinet-backoffice-2', cabB2);
   // canto de reunião informal na área aberta da frente (antes vazia)
   const meetTable = buildCoffeeTable(); meetTable.position.set(2, 0.12, 6.5); group.add(meetTable); ed('meeting-table', meetTable);
-  const meetC1 = buildWaitChair(0x22b573); meetC1.position.set(0.8, 0.12, 7.3); meetC1.rotation.y = Math.PI; group.add(meetC1); ed('meeting-chair-1', meetC1);
+  const meetC1 = buildWaitChair(0x394454); meetC1.position.set(0.8, 0.12, 7.3); meetC1.rotation.y = Math.PI; group.add(meetC1); ed('meeting-chair-1', meetC1);
   const meetC2 = buildWaitChair(0x22b573); meetC2.position.set(3.2, 0.12, 5.7); meetC2.rotation.y = 0; group.add(meetC2); ed('meeting-chair-2', meetC2);
 
   // ── SALA 3 — Showroom (x +8.25 a +21.75) ─────────────────────
@@ -240,7 +240,7 @@ export function buildOffice() {
   const tvShow = buildTV(showroomTexture(), 1.8, 1.0); tvShow.group.position.set(8.4, 1.65, -3); tvShow.group.rotation.y = Math.PI / 2; group.add(tvShow.group); ed('tv-showroom', tvShow.group);
   // vitrines de produto
   const disp1 = buildProductDisplay(0xf26a1b); disp1.position.set(18.5, 0.12, -1); group.add(disp1); ed('product-1', disp1);
-  const disp2 = buildProductDisplay(0x3b82f6); disp2.position.set(18.5, 0.12, 2); group.add(disp2); ed('product-2', disp2);
+  const disp2 = buildProductDisplay(0x394454); disp2.position.set(18.5, 0.12, 2); group.add(disp2); ed('product-2', disp2);
   // armário de arquivos
   const cabS = buildCabinet(0.9, 1.7, 0.5); cabS.position.set(10, 0.12, -8.9); group.add(cabS); ed('cabinet-showroom', cabS);
 
