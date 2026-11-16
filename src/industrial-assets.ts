@@ -17,6 +17,11 @@ export const INDUSTRIAL_ASSETS = {
   forklift: 'https://cdn.3dassets.dev/assets/27768/v1/model.glb',
   steelPallet: 'https://cdn.3dassets.dev/assets/27758/v1/model.glb',
   roboticWeldingCell: 'https://files.innerscene.com/library/robotic-welding-cell-with-positioner-safety-fencing-and-ligh-f7235945/5eee2637fa98403e6949/robotic-welding-cell-with-positioner-safety-fencing-and-ligh.glb',
+  officeDesk: 'https://cdn.3dassets.dev/assets/16964/v1/model.glb',
+  officeTaskChair: 'https://cdn.3dassets.dev/assets/16979/v1/model.glb',
+  curvedReceptionDesk: 'https://cdn.3dassets.dev/assets/26133/v1/model.glb',
+  officeSofa: 'https://cdn.3dassets.dev/assets/16990/v1/model.glb',
+  officeLoungeChair: 'https://cdn.3dassets.dev/assets/16988/v1/model.glb',
 } as const;
 
 export type IndustrialAssetKey = keyof typeof INDUSTRIAL_ASSETS;
