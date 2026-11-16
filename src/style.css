@@ -442,3 +442,11 @@ body.focus-mode #focusbtn{background:var(--navy);border-color:var(--navy);color:
   .connection-main h1{font-size:23px}
   .connection-footer{font-size:7px}
 }
+
+/* Precedência explícita sobre as regras legadas de KPI */
+#left .kpi b.kpi-value{font-size:17px;line-height:1.05;letter-spacing:-.045em;font-weight:800}
+#left .kpi-head small{font-size:9px;line-height:1.2;min-height:0}
+@media(max-width:650px){
+  #left .kpi b.kpi-value{font-size:14.5px;line-height:1.05;letter-spacing:-.04em}
+  #left .kpi-head small{font-size:8px;line-height:1.15}
+}
