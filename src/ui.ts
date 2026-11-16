@@ -7,16 +7,16 @@ const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[ch] ?? ch));
 
-const M_STATUS = { run: ['Operando', '#22b573'], idle: ['Parada', '#f5b83d'], down: ['Com falha', '#e5484d'] } as const;
-const S_STATUS = { online: ['Disponível', '#22b573'], busy: ['Em atendimento', '#f26a1b'], away: ['Ausente', '#9aa5b8'] } as const;
+const M_STATUS = { run: ['Operando', '#394454'], idle: ['Parada', '#98a1ad'], down: ['Com falha', '#f26a1b'] } as const;
+const S_STATUS = { online: ['Disponível', '#394454'], busy: ['Em atendimento', '#f26a1b'], away: ['Ausente', '#98a1ad'] } as const;
 const TYPE_LABEL = { laser: 'Corte a laser', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC', robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita' } as const;
 type LotState = 'empty' | 'critical' | 'full' | 'medium' | 'low';
 const LOT_STYLES: Record<LotState, { label: string; color: string; glyph: string }> = {
   empty: { label: 'Sem estoque', color: '#9aa5b8', glyph: '—' },
   critical: { label: 'Abaixo do mínimo', color: '#e5484d', glyph: '!' },
-  full: { label: 'Estoque saudável', color: '#22b573', glyph: '✓' },
-  medium: { label: 'Estoque médio', color: '#f5b83d', glyph: '≈' },
-  low: { label: 'Estoque baixo', color: '#3b82f6', glyph: '↓' },
+  full: { label: 'Estoque saudável', color: '#394454', glyph: '✓' },
+  medium: { label: 'Estoque médio', color: '#7f8997', glyph: '≈' },
+  low: { label: 'Estoque baixo', color: '#aab2bd', glyph: '↓' },
 };
 
 function lotState(occ: number, qty: number, min: number): LotState {
@@ -37,11 +37,15 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
   let currentTab: TabKey = 'producao';
   let lotFilter: 'all' | 'critical' | 'low' | 'empty' = 'all';
   let selected: Selection | null = null;
+  let searchTerm = '';
 
   (Object.keys(data.tabs) as TabKey[]).forEach((k) => {
     const b = document.createElement('button');
-    b.textContent = data.tabs[k].title;
+    const glyph = k === 'producao' ? '▥' : k === 'estoque' ? '▦' : '▤';
+    b.className = 'module-link';
+    b.innerHTML = `<span class="module-icon" aria-hidden="true">${glyph}</span><span class="module-name">${escapeHtml(data.tabs[k].title)}</span>`;
     b.dataset.k = k;
+    b.title = data.tabs[k].title;
     b.onclick = () => select(k);
     tabs.appendChild(b);
   });
@@ -54,19 +58,21 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
   function bottomFor(k: TabKey) {
     if (k === 'producao') {
       const oee = Math.round(data.machines.reduce((sum, machine) => sum + machine.oee, 0) / Math.max(1, data.machines.length));
+      const rows = data.machines.map((m, i) => ({ m, i })).filter(({ m }) => m.name.toLocaleLowerCase('pt-BR').includes(searchTerm));
       bottom.innerHTML = `<div class="bottom-content">
-        <div class="bottom-heading"><div><span class="panel-overline">VISÃO OPERACIONAL</span><h3>Máquinas · OEE médio ${oee}%</h3></div><span class="bottom-count">${data.machines.length} equipamentos</span></div>
-        <div class="chips">${data.machines.map((m, i) =>
-          `<button class="chip" data-k="machine" data-i="${i}"><span class="dot" style="background:${M_STATUS[m.status][1]}"></span>${escapeHtml(m.name)}<b>${m.oee}%</b></button>`).join('')}</div>
+        <div class="bottom-heading"><div><span class="panel-overline">VISÃO OPERACIONAL</span><h3>Máquinas · OEE médio ${oee}%</h3></div><span class="bottom-count">${rows.length} de ${data.machines.length}</span></div>
+        <div class="chips">${rows.map(({ m, i }) =>
+          `<button class="chip" data-k="machine" data-i="${i}"><span class="dot" style="background:${M_STATUS[m.status][1]}"></span>${escapeHtml(m.name)}<b>${m.oee}%</b></button>`).join('') || '<span class="empty-filter">Nenhuma máquina encontrada.</span>'}</div>
       </div>`;
     } else if (k === 'estoque') {
       const counts: Record<LotState, number> = { empty: 0, critical: 0, full: 0, medium: 0, low: 0 };
       data.lots.forEach((_lot, i) => { counts[statusForLot(i)] += 1; });
       const lotRows = data.lots.map((lot, i) => ({ lot, i, state: statusForLot(i), occ: data.occupancy[i] ?? 0 }))
-        .filter((item) => lotFilter === 'all'
+        .filter((item) => (lotFilter === 'all'
           || (lotFilter === 'critical' && item.state === 'critical')
           || (lotFilter === 'low' && (item.state === 'low' || item.state === 'medium'))
-          || (lotFilter === 'empty' && item.state === 'empty'));
+          || (lotFilter === 'empty' && item.state === 'empty'))
+          && [item.lot.id, item.lot.material, item.lot.location].some((value) => value.toLocaleLowerCase('pt-BR').includes(searchTerm)));
       const filters = [
         ['all', 'Todos', data.lots.length],
         ['critical', 'Críticos', counts.critical],
@@ -95,10 +101,11 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
       </div>`;
     } else {
       const goal = Math.round(data.sellers.reduce((sum, seller) => sum + seller.goalPct, 0) / Math.max(1, data.sellers.length));
+      const rows = data.sellers.map((v, i) => ({ v, i })).filter(({ v }) => v.name.toLocaleLowerCase('pt-BR').includes(searchTerm));
       bottom.innerHTML = `<div class="bottom-content">
-        <div class="bottom-heading"><div><span class="panel-overline">DESEMPENHO COMERCIAL</span><h3>Vendedores · meta média ${goal}%</h3></div><span class="bottom-count">${data.sellers.length} vendedores</span></div>
-        <div class="chips">${data.sellers.map((v, i) =>
-          `<button class="chip" data-k="seller" data-i="${i}"><span class="dot" style="background:${S_STATUS[v.status][1]}"></span>${escapeHtml(v.name.split(' ')[0])}<b>${v.goalPct}%</b></button>`).join('')}</div>
+        <div class="bottom-heading"><div><span class="panel-overline">DESEMPENHO COMERCIAL</span><h3>Vendedores · meta média ${goal}%</h3></div><span class="bottom-count">${rows.length} de ${data.sellers.length}</span></div>
+        <div class="chips">${rows.map(({ v, i }) =>
+          `<button class="chip" data-k="seller" data-i="${i}"><span class="dot" style="background:${S_STATUS[v.status][1]}"></span>${escapeHtml(v.name.split(' ')[0])}<b>${v.goalPct}%</b></button>`).join('') || '<span class="empty-filter">Nenhum vendedor encontrado.</span>'}</div>
       </div>`;
     }
   }
@@ -133,6 +140,10 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     currentTab = k;
     if (k !== 'estoque') lotFilter = 'all';
     tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.k === k));
+    const current = document.getElementById('current-module');
+    const inspectorTitle = document.getElementById('inspector-title');
+    if (current) current.textContent = data.tabs[k].title;
+    if (inspectorTitle) inspectorTitle.textContent = data.tabs[k].title;
     const tab = data.tabs[k];
     left.className = 'glass';
     left.innerHTML = `<div class="panel-heading"><div><span class="panel-overline">RESUMO OPERACIONAL</span><h3>Indicadores</h3></div><button class="panel-collapse" data-collapse="left" aria-label="Recolher indicadores" aria-expanded="true">−</button></div>
@@ -152,6 +163,12 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     bottomFor(k);
     onTab(k);
   }
+
+  const search = document.getElementById('inspector-search') as HTMLInputElement | null;
+  search?.addEventListener('input', () => {
+    searchTerm = search.value.trim().toLocaleLowerCase('pt-BR');
+    bottomFor(currentTab);
+  });
 
   left.onclick = (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-collapse]');
