@@ -31,19 +31,19 @@ export class SheetLots {
       const layers = v < 0.15 ? 0 : Math.max(1, Math.round(v * MAX));
       d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); d.position.set(x, BASE / 2, z); d.updateMatrix(); this.pallets.setMatrixAt(i, d.matrix);
       const state = states[i];
-      const palletTone = state === 'critical' ? 0xffb9bb
+      const palletTone = state === 'critical' ? 0xf7c5a5
         : state === 'empty' ? 0xc3cbd6
-          : state === 'full' ? 0xb6dcb9
-            : state === 'medium' ? 0xf3d69a
-              : state === 'low' ? 0xb8d0ee : 0xffffff;
+          : state === 'full' ? 0xd2d5da
+            : state === 'medium' ? 0xe0e2e6
+              : state === 'low' ? 0xd9dde2 : 0xffffff;
       this.pallets.setColorAt(i, c.setHex(palletTone));
       const steel = STEEL[Math.floor(hash(i) * STEEL.length)];
-      const tag = state === 'critical' ? 0xe5484d
-        : state === 'empty' ? 0x9aa5b8
-          : state === 'full' ? 0x22b573
-            : state === 'medium' ? 0xf5b83d
-              : state === 'low' ? 0x3b82f6
-                : v > 0.8 ? 0x22b573 : v > 0.5 ? 0xf5b83d : steel;
+      const tag = state === 'critical' ? 0xf26a1b
+        : state === 'empty' ? 0x9aa1aa
+          : state === 'full' ? 0x394454
+            : state === 'medium' ? 0x7f8997
+              : state === 'low' ? 0xaab2bd
+                : v > 0.8 ? 0x394454 : v > 0.5 ? 0x7f8997 : steel;
       for (let l = 0; l < MAX; l++) {
         const k = i * MAX + l;
         if (l >= layers) { d.scale.setScalar(0.0001); d.position.set(x, 0, z); }
