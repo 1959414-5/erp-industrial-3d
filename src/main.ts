@@ -194,10 +194,22 @@ function startApplication(data: Dataset) {
   const factory = new Factory(document.getElementById('scene') as HTMLCanvasElement);
   (window as any).__factory = factory;
   factory.setMachines(data.machines);
-  factory.setOccupancy(data.occupancy);
+  const lotStates = data.lots.map((lot, index) => {
+    const occupancy = data.occupancy[index] ?? 0;
+    if (occupancy < 0.15 || lot.qty <= 0) return 'empty';
+    if (lot.qty < lot.minQty) return 'critical';
+    if (occupancy > 0.8) return 'full';
+    return occupancy > 0.5 ? 'medium' : 'low';
+  });
+  factory.setOccupancy(data.occupancy, lotStates);
+
+  const dataStamp = document.getElementById('data-stamp');
+  if (dataStamp) {
+    dataStamp.textContent = 'consultado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
   // limpa restos do antigo modo de edição (posições salvas que ignoravam o layout do código)
   try { localStorage.removeItem('erp3d-scene-edits-v1'); localStorage.removeItem('erp3d-scene-edits-v2'); } catch { /* ignora */ }
-  const ui = mountUi(data, (tab) => { factory.select(null); factory.focus(tab); }, (sel) => factory.select(sel));
+  const ui = mountUi(data, (tab) => { factory.select(null); factory.focus(tab); }, (sel) => { if (sel) factory.focusSelection(sel); else factory.select(null); });
   factory.onHover = (s, x, y) => ui.showTip(s, x, y);
   factory.onPick = (s) => ui.pin(s);
   factory.onAnchor = (x, y, v) => ui.place(x, y, v);
@@ -208,6 +220,20 @@ function startApplication(data: Dataset) {
   document.getElementById('tabs')!.addEventListener('click', (e) => { const k = (e.target as HTMLElement).closest<HTMLElement>('button')?.dataset.k; if (k) curTab = k as TabKey; });
   const prevPick = factory.onPick; factory.onPick = (s) => { curSel = s; prevPick(s); };
   mountAi({ data, getContext: () => ({ tab: curTab, selected: curSel }), openTab: (t) => { ui.select(t); curTab = t; }, focus: (s) => factory.focusSelection(s) });
+  const focusButton = document.getElementById('focusbtn') as HTMLButtonElement | null;
+  const toggleFocusMode = (active: boolean) => {
+    document.body.classList.toggle('focus-mode', active);
+    if (focusButton) {
+      focusButton.setAttribute('aria-pressed', String(active));
+      focusButton.classList.toggle('active', active);
+      focusButton.textContent = active ? '× Sair do foco' : '◉ Modo foco';
+    }
+  };
+  focusButton?.addEventListener('click', () => toggleFocusMode(!document.body.classList.contains('focus-mode')));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.body.classList.contains('focus-mode')) toggleFocusMode(false);
+  });
+
   mountLayout();   // painéis arrastáveis (✥) + posição salva
 
   // botões de paredes (Corte / Altas / Baixas)
