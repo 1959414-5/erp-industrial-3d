@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 // Grade 5×7 de paletes com chapas — posição e espaçamento do layout de referência.
-const COLS = 5, ROWS = 7, MAX = 18, T = 0.07, GAP = 0.012, BASE = 0.16;
-const SPX = 5.4, SPZ = 3.0;
+const COLS = 6, ROWS = 7, MAX = 18, T = 0.07, GAP = 0.012, BASE = 0.16;
+const SPX = 4.5, SPZ = 3.0;
 const STEEL = [0xaab3c2, 0xb9c1ce, 0x8f9aab, 0xc4cbd6];
 const hash = (n: number) => Math.abs(Math.sin(n * 127.1) * 43758.5453) % 1;
 
@@ -23,7 +23,7 @@ export class SheetLots {
     this.setOccupancy(new Array(n).fill(0.5));
   }
 
-  setOccupancy(values: number[]) {
+  setOccupancy(values: number[], states: string[] = []) {
     const d = new THREE.Object3D(), c = new THREE.Color();
     for (let i = 0; i < COLS * ROWS; i++) {
       const v = values[i] ?? 0, col = i % COLS, row = Math.floor(i / COLS);
@@ -31,7 +31,13 @@ export class SheetLots {
       const layers = v < 0.15 ? 0 : Math.max(1, Math.round(v * MAX));
       d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); d.position.set(x, BASE / 2, z); d.updateMatrix(); this.pallets.setMatrixAt(i, d.matrix);
       const steel = STEEL[Math.floor(hash(i) * STEEL.length)];
-      const tag = v > 0.8 ? 0xf26a1b : v > 0.5 ? 0xf5b783 : steel;
+      const state = states[i];
+      const tag = state === 'critical' ? 0xe5484d
+        : state === 'empty' ? 0x9aa5b8
+          : state === 'full' ? 0x22b573
+            : state === 'medium' ? 0xf5b83d
+              : state === 'low' ? 0x3b82f6
+                : v > 0.8 ? 0x22b573 : v > 0.5 ? 0xf5b83d : steel;
       for (let l = 0; l < MAX; l++) {
         const k = i * MAX + l;
         if (l >= layers) { d.scale.setScalar(0.0001); d.position.set(x, 0, z); }
