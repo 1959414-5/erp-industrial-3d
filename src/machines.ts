@@ -6,12 +6,12 @@ export interface MachineModel { group: THREE.Group; update(dt: number, s: Status
 
 const std = (color: number, rough = 0.6, metal = 0.1) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 const M = {
-  white: std(0xf4f6fa, 0.5), gray: std(0xaeb8ca, 0.45, 0.5), dark: std(0x2b3550, 0.5, 0.3), blue: std(0x2563c9, 0.45, 0.2),
+  white: std(0xf4f6f7, 0.5), gray: std(0x9aa1aa, 0.45, 0.5), dark: std(0x303b49, 0.5, 0.3), blue: std(0x303b49, 0.45, 0.2),
   orange: std(0xf26a1b, 0.45, 0.2), metal: std(0xcfd6e2, 0.3, 0.8),
-  glass: new THREE.MeshStandardMaterial({ color: 0x9ec5ff, transparent: true, opacity: 0.28, roughness: 0.1, depthWrite: false }),
+  glass: new THREE.MeshStandardMaterial({ color: 0xd7dce1, transparent: true, opacity: 0.24, roughness: 0.18, metalness: 0.12, depthWrite: false }),
   fence: new THREE.MeshStandardMaterial({ color: 0xffb36b, transparent: true, opacity: 0.22, depthWrite: false }),
-  screen: new THREE.MeshStandardMaterial({ color: 0x102040, emissive: 0x3b82f6, emissiveIntensity: 0.9 }),
-  spark: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffb347, emissiveIntensity: 3 }),
+  screen: new THREE.MeshStandardMaterial({ color: 0x303b49, emissive: 0xe96b2c, emissiveIntensity: 0.28 }),
+  spark: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xe96b2c, emissiveIntensity: 2.4 }),
 };
 const b = (w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); mesh.position.set(x, y + h / 2, z); return mesh;
@@ -21,31 +21,146 @@ const cyl = (r: number, h: number, m: THREE.Material, x = 0, y = 0, z = 0, seg =
 };
 const sparkMesh = () => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), M.spark); s.visible = false; return s; };
 
-/** Torre de sinalização: verde = operando, amarelo = parada, vermelho (piscando) = falha. */
+/** Sinalização em grafite, cinza e laranja: operando, parada e falha. */
 function stackLight(g: THREE.Group, x: number, y: number, z: number) {
   g.add(cyl(0.04, 0.5, M.dark, x, y, z, 10));
-  const mats = [0x22b573, 0xf5b83d, 0xe5484d].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.05 }));
+  const colors = [0xe96b2c, 0x9aa1aa, 0x303b49];
+  const mats = colors.map((c) => new THREE.MeshStandardMaterial({
+    color: c,
+    emissive: c === 0x303b49 ? 0xe96b2c : c,
+    emissiveIntensity: 0.04,
+  }));
   mats.forEach((m, i) => g.add(cyl(0.11, 0.13, m, x, y + 0.5 + i * 0.14, z, 16)));
   return (s: Status, t: number) => {
-    mats[0].emissiveIntensity = s === 'run' ? 1.6 : 0.05;
-    mats[1].emissiveIntensity = s === 'idle' ? 1.6 : 0.05;
-    mats[2].emissiveIntensity = s === 'down' ? (Math.sin(t * 8) > 0 ? 1.8 : 0.2) : 0.05;
+    mats[0].emissiveIntensity = s === 'run' ? 1.35 : 0.04;
+    mats[1].emissiveIntensity = s === 'idle' ? 0.8 : 0.04;
+    mats[2].emissiveIntensity = s === 'down' ? (Math.sin(t * 8) > 0 ? 1.55 : 0.12) : 0.04;
   };
 }
 
 function laser() {
   const g = new THREE.Group();
-  g.add(b(3, 0.8, 2.2, M.white), b(2.7, 0.08, 1.9, M.dark, 0, 0.8), b(2.3, 0.05, 1.5, M.metal, -0.1, 0.88));
-  g.add(b(0.16, 0.3, 2.2, M.gray, -1.4, 0.8), b(0.16, 0.3, 2.2, M.gray, 1.4, 0.8));
-  const beam = new THREE.Group(); beam.position.y = 1.1; beam.add(b(3, 0.26, 0.3, M.blue));
-  const head = new THREE.Group(); head.add(b(0.3, 0.42, 0.26, M.dark, 0, -0.38));
-  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 12), M.gray); nozzle.rotation.x = Math.PI; nozzle.position.y = -0.5;
-  const sp = sparkMesh(); sp.position.y = -0.64; head.add(nozzle, sp); beam.add(head); g.add(beam);
-  g.add(b(0.5, 1.3, 0.5, M.white, 1.15, 0, 1.4));
-  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.26), M.screen); scr.position.set(1.15, 1.15, 1.66); g.add(scr);
-  const light = stackLight(g, -1.3, 1.25, -0.9); let p = 0, t = 0;
-  return { group: g, update(dt: number, s: Status) { t += dt; if (s === 'run') p += dt;
-    beam.position.z = Math.sin(p * 0.7) * 0.55; head.position.x = Math.sin(p * 1.9) * 1.0; sp.visible = s === 'run' && Math.sin(p * 40) > -0.4; light(s, t); } };
+
+  // Base estrutural e mesa de corte interna.
+  g.add(b(3.8, 0.28, 2.72, M.dark, 0, 0.14, 0));
+  g.add(b(3.56, 0.12, 2.48, M.metal, 0, 0.34, 0));
+  g.add(b(3.18, 0.1, 2.02, M.dark, 0, 0.48, -0.02));
+  for (let i = 0; i < 17; i++) {
+    const z = -0.92 + i * 0.115;
+    g.add(b(3.0, 0.035, 0.035, M.metal, 0, 0.57, z));
+  }
+
+  // Carenagem fechada, laterais, traseira e cobertura superior.
+  g.add(
+    b(0.22, 1.72, 2.36, M.white, -1.72, 1.22, -0.02),
+    b(0.22, 1.72, 2.36, M.white, 1.72, 1.22, -0.02),
+    b(3.22, 1.72, 0.16, M.white, 0, 1.22, -1.12),
+    b(3.72, 0.18, 2.62, M.gray, 0, 2.18, -0.02),
+    b(3.45, 0.12, 0.12, M.dark, 0, 2.05, 1.15),
+  );
+
+  // Portas frontais com visor translúcido e perfis de grafite.
+  g.add(
+    b(3.22, 0.12, 0.1, M.dark, 0, 0.58, 1.18),
+    b(3.22, 0.1, 0.1, M.dark, 0, 1.98, 1.18),
+    b(0.09, 1.28, 0.1, M.dark, -1.59, 1.29, 1.18),
+    b(0.09, 1.28, 0.1, M.dark, 1.59, 1.29, 1.18),
+  );
+  const windowMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd9dde2, transparent: true, opacity: 0.22,
+    roughness: 0.16, metalness: 0.12, depthWrite: false,
+  });
+  const leftDoor = b(1.52, 1.25, 0.035, windowMaterial, -0.78, 1.28, 1.18);
+  const rightDoor = b(1.52, 1.25, 0.035, windowMaterial, 0.78, 1.28, 1.18);
+  g.add(leftDoor, rightDoor, b(0.035, 1.25, 0.05, M.orange, 0, 1.28, 1.2));
+
+  // Gantry, cabeçote laser, bocal e trilho porta-cabos.
+  const gantry = new THREE.Group();
+  gantry.position.set(0, 1.77, 0);
+  gantry.add(b(3.08, 0.16, 0.22, M.dark));
+  gantry.add(b(2.92, 0.045, 0.08, M.orange, 0, 0.1, 0.02));
+  const head = new THREE.Group();
+  head.add(b(0.36, 0.42, 0.34, M.gray, 0, -0.28, 0.03));
+  head.add(b(0.24, 0.2, 0.26, M.dark, 0, -0.58, 0.03));
+  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.22, 16), M.metal);
+  nozzle.rotation.x = Math.PI;
+  nozzle.position.set(0, -0.78, 0.03);
+  const sp = sparkMesh();
+  sp.scale.setScalar(0.72);
+  sp.position.set(0, -0.88, 0.03);
+  head.add(nozzle, sp);
+  gantry.add(head);
+  g.add(gantry);
+
+  // Corrente porta-cabos em segmentos para reforçar a leitura do equipamento.
+  const cable = new THREE.Group();
+  for (let i = 0; i < 12; i++) cable.add(b(0.12, 0.055, 0.08, i % 3 === 0 ? M.orange : M.dark, -1.25 + i * 0.11, 0, 0));
+  cable.position.set(0, 2.0, -0.88);
+  g.add(cable);
+
+  // Console lateral com tela orientada para o corredor.
+  g.add(
+    b(0.55, 1.12, 0.58, M.white, 2.28, 0.56, 0.7),
+    b(0.58, 0.08, 0.62, M.dark, 2.28, 1.12, 0.7),
+    b(0.42, 0.42, 0.04, M.dark, 2.28, 1.42, 1.0),
+    b(0.28, 0.035, 0.04, M.orange, 2.28, 1.21, 1.03),
+  );
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.25), M.screen);
+  screen.position.set(2.28, 1.42, 1.03);
+  g.add(screen);
+  const light = stackLight(g, -1.42, 2.26, -0.92);
+
+  let p = 0, t = 0;
+  return {
+    group: g,
+    update(dt: number, s: Status) {
+      t += dt;
+      if (s === 'run') p += dt;
+      gantry.position.z = Math.sin(p * 0.72) * 0.52;
+      head.position.x = Math.sin(p * 1.85) * 1.08;
+      cable.rotation.y = Math.sin(p * 0.72) * 0.09;
+      sp.visible = s === 'run' && Math.sin(p * 35) > -0.3;
+      light(s, t);
+    },
+  };
+}
+
+/** Mesa CNC aberta com tocha: fallback visual para o tipo plasma. */
+function plasma() {
+  const g = new THREE.Group();
+  g.add(b(5.2, 0.28, 2.55, M.dark, 0, 0.16));
+  g.add(b(4.95, 0.12, 2.3, M.metal, 0, 0.34));
+  for (let i = 0; i < 25; i++) {
+    const z = -1.02 + i * 0.085;
+    g.add(b(4.7, 0.035, 0.045, M.gray, 0, 0.43, z));
+  }
+  for (const x of [-2.38, 2.38]) {
+    g.add(b(0.12, 1.55, 0.12, M.dark, x, 0.38, -0.98));
+    g.add(b(0.12, 1.55, 0.12, M.dark, x, 0.38, 0.98));
+  }
+  const bridge = new THREE.Group();
+  bridge.position.set(0, 1.76, 0);
+  bridge.add(b(5.0, 0.25, 0.3, M.dark));
+  bridge.add(b(0.22, 0.62, 0.32, M.orange, 0, -0.42, 0.02));
+  const torch = new THREE.Group();
+  torch.add(b(0.22, 0.35, 0.22, M.gray, 0, -0.28));
+  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.18, 12), M.metal);
+  nozzle.rotation.x = Math.PI; nozzle.position.y = -0.53; torch.add(nozzle);
+  const spark = sparkMesh(); spark.position.y = -0.63; torch.add(spark);
+  bridge.add(torch); g.add(bridge);
+  const cabinet = b(0.52, 1.1, 0.62, M.white, 2.72, 0.0, 0.78);
+  g.add(cabinet, b(0.46, 0.36, 0.04, M.dark, 2.72, 0.72, 1.1));
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.24), M.screen);
+  screen.position.set(2.72, 0.84, 1.13); g.add(screen);
+  const light = stackLight(g, -2.3, 1.95, -0.95);
+  let p = 0, t = 0;
+  return { group: g, update(dt: number, s: Status) {
+    t += dt; if (s === 'run') p += dt;
+    bridge.position.z = Math.sin(p * 0.7) * 0.48;
+    torch.position.x = Math.sin(p * 1.7) * 2.0;
+    spark.visible = s === 'run' && Math.sin(p * 34) > -0.3;
+    light(s, t);
+  } };
 }
 
 function pressBrake() {
@@ -146,7 +261,7 @@ function bandSaw() {
 }
 
 const BUILDERS: Record<MachineType, () => { group: THREE.Group; update(dt: number, s: Status): void }> = {
-  laser, pressBrake, cnc, robotWelder, paintBooth, punchPress, bandSaw
+  laser, plasma, pressBrake, cnc, robotWelder, paintBooth, punchPress, bandSaw
 };
 
 export function buildMachine(type: MachineType): MachineModel {
