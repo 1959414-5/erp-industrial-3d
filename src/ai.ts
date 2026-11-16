@@ -25,7 +25,7 @@ const savePick = (p: Pick | null) => { try { p ? localStorage.setItem(PICK_KEY, 
 const fmtN = (v: string | number | null | undefined) => v == null || v === '' ? '—' : Number(v).toLocaleString('pt-BR');
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
-const SEV = { critical: '🔴', warn: '🟠', info: '🔵', good: '🟢' } as const;
+const SEV = { critical: '!', warn: '!', info: 'i', good: '✓' } as const;
 const KIND_TAB: Record<Selection['kind'], TabKey> = { machine: 'producao', lot: 'estoque', seller: 'comercial' };
 
 /** Markdown mínimo e seguro: **negrito**, *itálico*, listas "- " e quebras de linha. Escapa HTML antes. */
