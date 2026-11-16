@@ -3,7 +3,6 @@ import type { Dataset, Selection, TabKey } from './data';
 import { Factory, type WallMode } from './scene';
 import { mountUi } from './ui';
 import { mountAi } from './ai';
-import { mountLayout } from './layout';
 
 type ConnectionStep = 'api' | 'database' | 'data';
 const CONNECTION_STEPS: ConnectionStep[] = ['api', 'database', 'data'];
@@ -234,7 +233,6 @@ function startApplication(data: Dataset) {
     if (event.key === 'Escape' && document.body.classList.contains('focus-mode')) toggleFocusMode(false);
   });
 
-  mountLayout();   // painéis arrastáveis (✥) + posição salva
 
   // botões de paredes (Corte / Altas / Baixas)
   const wallBtns = document.querySelectorAll<HTMLButtonElement>('#wallctl button');
