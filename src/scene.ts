@@ -308,6 +308,51 @@ export class Factory {
     model.position.y -= fitted.min.y;
   }
 
+  /** Efeito de arco e respingos sincronizado ao status da célula de solda. */
+  private createWeldingArcEffect(model: THREE.Group): (dt: number, status: Machine['status']) => void {
+    const effect = new THREE.Group();
+    effect.name = 'welding-arc-effect';
+    // O GLB original usa Z como eixo vertical; loadIndustrialAsset converte para Y-up.
+    // O arco fica na altura aproximada do gabarito/peça de trabalho.
+    effect.position.set(0, 0, 0.98);
+
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(0.052, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xffa04a, transparent: true, opacity: 0.95 })
+    );
+    effect.add(core);
+
+    const sparks = Array.from({ length: 7 }, (_, index) => {
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018 + (index % 3) * 0.004, 7, 6),
+        new THREE.MeshBasicMaterial({ color: 0xe96b2c, transparent: true, opacity: 0.9 })
+      );
+      effect.add(spark);
+      return spark;
+    });
+    model.add(effect);
+
+    let elapsed = 0;
+    return (dt, status) => {
+      elapsed += dt;
+      const active = status === 'run';
+      effect.visible = active;
+      if (!active) return;
+
+      const pulse = 0.5 + 0.5 * Math.sin(elapsed * 34);
+      core.scale.setScalar(0.72 + pulse * 0.55);
+      sparks.forEach((spark, index) => {
+        const phase = elapsed * (4.2 + index * 0.31) + index * 1.71;
+        spark.position.set(
+          Math.sin(phase) * (0.055 + (index % 3) * 0.025),
+          Math.abs(Math.sin(phase * 1.37)) * (0.07 + (index % 2) * 0.045),
+          Math.cos(phase * 1.13) * 0.06
+        );
+        const fade = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(phase * 2.4));
+        spark.scale.setScalar(fade);
+      });
+    };
+  }
   /** Substitui apenas o conteúdo visual; o grupo raiz, índice, posição e eventos permanecem iguais. */
   private async replaceMachineVisual(index: number, key: IndustrialAssetKey) {
     const root = this.machineGroups[index];
@@ -316,11 +361,17 @@ export class Factory {
       const asset = await loadIndustrialAsset(key);
       if (this.machineGroups[index] !== root || !root.parent) return;
 
-      const maxFootprint = key === 'plasmaCutter' ? 5.55 : key === 'bandSaw' ? 3.5 : 4.0;
-      const maxHeight = key === 'plasmaCutter' ? 2.9 : key === 'bandSaw' ? 2.65 : 3.1;
+      const maxFootprint = key === 'roboticWeldingCell' ? 5.25 : key === 'plasmaCutter' ? 5.55 : key === 'bandSaw' ? 3.5 : 4.0;
+      const maxHeight = key === 'roboticWeldingCell' ? 2.7 : key === 'plasmaCutter' ? 2.9 : key === 'bandSaw' ? 2.65 : 3.1;
       this.fitImportedModel(asset.scene, maxFootprint, maxHeight);
       root.clear();
       root.add(asset.scene);
+
+      if (key === 'roboticWeldingCell') {
+        const updateArc = this.createWeldingArcEffect(asset.scene);
+        this.models[index] = { group: root, update: updateArc };
+        return;
+      }
 
       const clip = key === 'bandSaw'
         ? asset.animations.find((item) => /blade|spin|saw/i.test(item.name))
@@ -420,7 +471,8 @@ export class Factory {
       const importedType: IndustrialAssetKey | null = ty === 'cnc' ? 'cnc'
         : ty === 'pressBrake' ? 'pressBrake'
           : ty === 'bandSaw' ? 'bandSaw'
-            : ty === 'plasma' ? 'plasmaCutter' : null;
+            : ty === 'plasma' ? 'plasmaCutter'
+              : ty === 'robotWelder' ? 'roboticWeldingCell' : null;
       if (importedType) void this.replaceMachineVisual(i, importedType);
       // operador no lado do corredor
       const opZ = back ? mz + 2.8 : mz - 2.8;
