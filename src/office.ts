@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildCounter, buildPrinter, buildWaterCooler, buildTV, buildServerRack, buildCabinet,
   buildSofa, buildCoffeeTable, buildWaitChair, buildProductDisplay } from './props';
+import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
 const std = (color: number, rough = 0.6, metal = 0.05) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 const b = (w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0) => {
@@ -25,6 +26,19 @@ function labelBoard(txt: string): THREE.Mesh {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.64), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
 }
+/** Troca apenas o visual interno de um móvel, preservando seu root, posição e ID editável. */
+function replaceOfficeVisual(root: THREE.Group, key: IndustrialAssetKey, scale: [number, number, number] = [1, 1, 1]) {
+  void loadIndustrialAsset(key).then(({ scene }) => {
+    if (!root.parent) return;
+    scene.scale.set(scale[0], scale[1], scale[2]);
+    root.clear();
+    root.add(scene);
+  }).catch((error) => {
+    // O mobiliário procedural permanece visível se a CDN estiver indisponível.
+    console.warn(`Não foi possível carregar o móvel GLB ${key}; mantendo o modelo local.`, error);
+  });
+}
+
 const SHIRTS = [0xe96b2c, 0x394454, 0x7c8591, 0x394454, 0xe96b2c, 0x7c8591, 0x394454, 0xe96b2c, 0x7c8591, 0x394454];
 const SKINS  = [0xf1c9a5, 0xd9a37a, 0xa8714a, 0x7a4b2e];
 
@@ -201,16 +215,24 @@ export function buildOffice() {
   // Balcão de atendimento — encostado no fundo da sala, FORA do corredor z∈(-5,-2) que liga a
   // porta de entrada (parede esquerda) à porta da divisória. Clientes ficam do lado +z (frente
   // do balcão), os 2 vendedores ficam atrás dele (lado da parede), lado a lado.
-  const counter = buildCounter(5.5); counter.position.set(-14.75, 0.12, -6.45); group.add(counter); ed('counter-reception', counter);
+  const counter = new THREE.Group(); counter.add(buildCounter(5.5));
+  counter.position.set(-14.75, 0.12, -6.45); group.add(counter); ed('counter-reception', counter);
+  replaceOfficeVisual(counter, 'curvedReceptionDesk');
   // TV na parede do fundo, acima do balcão, com o dashboard da empresa
   const tvRec = buildTV(tex, 1.8, 1.0); tvRec.group.position.set(-14.75, 1.65, -9.4); group.add(tvRec.group); ed('tv-reception', tvRec.group);
   // armário de arquivos
   const cabR = buildCabinet(0.9, 1.7, 0.5); cabR.position.set(-9.6, 0.12, -8.9); group.add(cabR); ed('cabinet-reception', cabR);
   // sofá + mesinha + 2 cadeiras — área de espera no canto frontal
-  const sofa = buildSofa(1.9, 0x394454); sofa.position.set(-18.6, 0.12, 4.6); sofa.rotation.y = Math.PI / 2; group.add(sofa); ed('sofa', sofa);
+  const sofa = new THREE.Group(); sofa.add(buildSofa(1.9, 0x394454));
+  sofa.position.set(-18.6, 0.12, 4.6); sofa.rotation.y = Math.PI / 2; group.add(sofa); ed('sofa', sofa);
+  replaceOfficeVisual(sofa, 'officeSofa');
   const table = buildCoffeeTable(); table.position.set(-17.0, 0.12, 4.6); group.add(table); ed('coffee-table', table);
-  const wc1 = buildWaitChair(0x394454); wc1.position.set(-15.6, 0.12, 2.9); wc1.rotation.y = -Math.PI / 2; group.add(wc1); ed('waitchair-1', wc1);
-  const wc2 = buildWaitChair(0x3b5578); wc2.position.set(-15.6, 0.12, 6.3); wc2.rotation.y = -Math.PI / 2; group.add(wc2); ed('waitchair-2', wc2);
+  const wc1 = new THREE.Group(); wc1.add(buildWaitChair(0x394454));
+  wc1.position.set(-15.6, 0.12, 2.9); wc1.rotation.y = -Math.PI / 2; group.add(wc1); ed('waitchair-1', wc1);
+  replaceOfficeVisual(wc1, 'officeLoungeChair');
+  const wc2 = new THREE.Group(); wc2.add(buildWaitChair(0x394454));
+  wc2.position.set(-15.6, 0.12, 6.3); wc2.rotation.y = -Math.PI / 2; group.add(wc2); ed('waitchair-2', wc2);
+  replaceOfficeVisual(wc2, 'officeLoungeChair');
   // credência baixa no canto traseiro-esquerdo (preenche o vazio perto da entrada)
   const credenza = buildCabinet(1.6, 1.0, 0.45); credenza.position.set(-20.3, 0.12, -6.5); group.add(credenza); ed('credenza-reception', credenza);
 
@@ -229,13 +251,15 @@ export function buildOffice() {
   // canto de reunião informal na área aberta da frente (antes vazia)
   const meetTable = buildCoffeeTable(); meetTable.position.set(2, 0.12, 6.5); group.add(meetTable); ed('meeting-table', meetTable);
   const meetC1 = buildWaitChair(0x394454); meetC1.position.set(0.8, 0.12, 7.3); meetC1.rotation.y = Math.PI; group.add(meetC1); ed('meeting-chair-1', meetC1);
-  const meetC2 = buildWaitChair(0x22b573); meetC2.position.set(3.2, 0.12, 5.7); meetC2.rotation.y = 0; group.add(meetC2); ed('meeting-chair-2', meetC2);
+  const meetC2 = buildWaitChair(0x394454); meetC2.position.set(3.2, 0.12, 5.7); meetC2.rotation.y = 0; group.add(meetC2); ed('meeting-chair-2', meetC2);
 
   // ── SALA 3 — Showroom (x +8.25 a +21.75) ─────────────────────
   // impressora extra no showroom
   const prS = buildPrinter(); prS.scale.setScalar(0.9); prS.position.set(20, 0.12, -8.8); group.add(prS); ed('printer-showroom', prS);
   // balcão de vendas do showroom (ponto de atendimento ao cliente)
-  const showCounter = buildCounter(4.5); showCounter.position.set(13, 0.12, -1); group.add(showCounter); ed('counter-showroom', showCounter);
+  const showCounter = new THREE.Group(); showCounter.add(buildCounter(4.5));
+  showCounter.position.set(13, 0.12, -1); group.add(showCounter); ed('counter-showroom', showCounter);
+  replaceOfficeVisual(showCounter, 'curvedReceptionDesk', [1.35, 1, 1]);
   // TV na divisória, virada para dentro do showroom, com o catálogo de produtos
   const tvShow = buildTV(showroomTexture(), 1.8, 1.0); tvShow.group.position.set(8.4, 1.65, -3); tvShow.group.rotation.y = Math.PI / 2; group.add(tvShow.group); ed('tv-showroom', tvShow.group);
   // vitrines de produto
@@ -278,9 +302,12 @@ export function buildOffice() {
     // posição do assento (0,95 à frente da mesa, na direção em que a mesa está virada)
     const sx = px + 0.95 * Math.sin(rot), sz = pz + 0.95 * Math.cos(rot);
     const s = new THREE.Group(); s.position.set(px, 0.12, pz); s.rotation.y = rot;
-    // mesa
-    s.add(b(1.7, 0.06, 0.85, white, 0, 0.75, 0));
-    for (const [lx, lz] of [[-0.8, -0.38], [0.8, -0.38], [-0.8, 0.38], [0.8, 0.38]]) s.add(b(0.06, 0.75, 0.06, gray, lx, 0, lz));
+    // mesa: mantém o root de cada estação, trocando somente a geometria do móvel.
+    const deskVisual = new THREE.Group();
+    deskVisual.add(b(1.7, 0.06, 0.85, white, 0, 0.75, 0));
+    for (const [lx, lz] of [[-0.8, -0.38], [0.8, -0.38], [-0.8, 0.38], [0.8, 0.38]]) deskVisual.add(b(0.06, 0.75, 0.06, gray, lx, 0, lz));
+    s.add(deskVisual);
+    replaceOfficeVisual(deskVisual, 'officeDesk');
     // monitor
     s.add(b(0.12, 0.22, 0.1, dark, 0, 0.81, -0.15), b(0.66, 0.4, 0.04, dark, 0, 1.0, -0.15));
     const screen = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.7 });
@@ -289,9 +316,15 @@ export function buildOffice() {
     group.add(s); sellers.push(s); ed(`desk-${n}`, s);
 
     // vendedor sentado (figura independente da mesa, para poder sair andando)
+    // Cadeira permanece no lugar mesmo quando o vendedor levanta para atender.
+    const chairRoot = new THREE.Group(); chairRoot.position.set(sx, 0.12, sz); chairRoot.rotation.y = rot;
+    const fallbackChair = new THREE.Group();
+    fallbackChair.add(b(0.58, 0.07, 0.55, chair, 0, 0.5, 0.05), b(0.58, 0.62, 0.07, chair, 0, 0.55, 0.33), b(0.08, 0.5, 0.08, dark, 0, 0, 0.05), b(0.6, 0.05, 0.06, dark, 0, 0, 0.05), b(0.06, 0.05, 0.6, dark, 0, 0, 0.05));
+    chairRoot.add(fallbackChair); group.add(chairRoot); ed(`chair-${n}`, chairRoot);
+    replaceOfficeVisual(chairRoot, 'officeTaskChair');
+
     const sit = new THREE.Group(); sit.position.set(sx, 0.12, sz); sit.rotation.y = rot;
     const shirt = std(SHIRTS[n % SHIRTS.length], 0.7), skin = std(SKINS[(n * 3 + 1) % SKINS.length], 0.8), pants = std(0x2b3550, 0.8);
-    sit.add(b(0.58, 0.07, 0.55, chair, 0, 0.5, 0.05), b(0.58, 0.62, 0.07, chair, 0, 0.55, 0.33), b(0.08, 0.5, 0.08, dark, 0, 0, 0.05), b(0.6, 0.05, 0.06, dark, 0, 0, 0.05), b(0.06, 0.05, 0.6, dark, 0, 0, 0.05));
     for (const x of [-0.12, 0.12]) sit.add(b(0.16, 0.16, 0.5, pants, x, 0.57, -0.22), b(0.14, 0.52, 0.14, pants, x, 0.02, -0.47));
     sit.add(b(0.44, 0.62, 0.27, shirt, 0, 0.68, 0.02));
     const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 16), skin); sHead.position.set(0, 1.5, -0.02);
