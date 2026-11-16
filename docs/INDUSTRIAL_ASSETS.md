@@ -1,6 +1,6 @@
 # Modelos 3D industriais externos
 
-O ERP Industrial Analytics 3D usa alguns modelos GLB da coleção **Machine Shop and Factory Hall**, publicada por 3DAssets.dev.
+O ERP Industrial Analytics 3D usa modelos GLB da coleção **Machine Shop and Factory Hall**, publicada por 3DAssets.dev, e uma célula completa de solda robotizada da biblioteca Innerscene.
 
 Fonte: https://3dassets.dev/packs/machine-shop-and-factory-hall
 
@@ -15,12 +15,12 @@ A página da coleção informa licença **CC0 1.0 Universal** para os modelos de
 | Serra de fita | Horizontal bandsaw | [27726](https://3dassets.dev/assets/27726) |
 | Porta-paletes do estoque | Pallet racking bay | [27757](https://3dassets.dev/assets/27757) |
 | Estantes de chapas | Sheet metal storage rack | [27761](https://3dassets.dev/assets/27761) |
-| Empilhadeiras em rota | Counterbalance forklift truck | [27768](https://3dassets.dev/assets/27768) |
+| Empilhadeiras em rota | Counterbalance forklift truck | [27768](https://3dassets.dev/assets/27768) |\n| Células de solda robotizada | Robotic welding cell with positioner, safety fencing and light curtain | [Innerscene](https://www.innerscene.com/tools/library/3d-parts/robotic-welding-cell-with-positioner-safety-fencing-and-ligh-f7235945) |
 | Mesas de corte com tocha (plasma/oxicorte) | Profile cutting table | [37945](https://3dassets.dev/assets/37945) |
 
 ## Carregamento
 
-Os arquivos GLB são carregados sob demanda pelo `GLTFLoader` do Three.js, a partir do CDN da biblioteca. O navegador pode armazenar os arquivos em cache. O projeto não copia os binários dos modelos para o repositório.
+Os arquivos GLB são carregados sob demanda pelo `GLTFLoader` do Three.js. Os modelos da 3DAssets.dev vêm do CDN da biblioteca; a célula de solda vem do arquivo GLB disponibilizado pela Innerscene (16,9 MB). O carregador mantém cache por URL. O projeto não copia os binários dos modelos para o repositório.
 
 O código de carregamento fica em `src/industrial-assets.ts`; os pontos de integração ficam em `src/scene.ts`.
 
@@ -36,7 +36,7 @@ Esta integração altera somente a camada visual 3D:
 
 ## Limitações deste primeiro protótipo
 
-A coleção consultada não fornece um modelo específico de cortadora a laser ou plasma. Esses equipamentos permanecem com os modelos procedurais atuais. Os modelos importados são ativos visuais e não representam telemetria, sensores ou estado físico em tempo real.
+A coleção consultada não fornece um modelo específico de cortadora a laser ou plasma. Esses equipamentos permanecem com os modelos procedurais atuais. Os modelos importados são ativos visuais e não representam telemetria, sensores ou estado físico em tempo real. As três máquinas já existentes do tipo `robotWelder` recebem o mesmo modelo de célula, sem criar novos registros ou alterar seus identificadores.
 
 
 ## Corte a laser e plasma
@@ -45,3 +45,13 @@ A coleção consultada não fornece um modelo específico de cortadora a laser o
 - **Plasma:** foi integrado o GLB "Profile cutting table (Shipyard and Dry Dock)", uma mesa CNC aberta de corte com tocha, dimensões de origem 5,35 × 1,76 × 2,90 m, 368 triângulos, clips "open" e "close" e licença CC0 1.0. Fonte: https://3dassets.dev/assets/shipyard-and-dry-dock-shipyard-and-dry-dock-profile-cu-733237ad
 
 A associação com a máquina de plasma é visual. A aplicação só exibirá o modelo quando uma máquina existente vier da API com `type: "plasma"`; nenhum registro, consulta ou dado foi criado ou alterado.
+
+## Célula de solda robotizada
+
+- Modelo completo com robô de seis eixos, tocha MIG, posicionador, peça de trabalho, cercamento de segurança, cortina de luz, painel do operador e armários externos.
+- Dimensões de origem: aproximadamente 5,08 × 4,09 × 2,55 m; o modelo é convertido de Z-up para Y-up e ajustado à escala da fábrica.
+- Licença declarada na biblioteca: CC0, com uso comercial permitido e sem exigência de atribuição. A página da biblioteca informa disponibilidade do arquivo até 23/10/2029.
+- O efeito visual do arco e dos respingos acompanha o status existente da máquina (run). Não é telemetria real nem altera os dados de produção.
+- Como o arquivo tem 16,9 MB e é externo, a integração é assíncrona. Se o carregamento falhar, a célula procedural original permanece como fallback.
+
+Fonte do modelo e licença: https://www.innerscene.com/tools/library/3d-parts/robotic-welding-cell-with-positioner-safety-fencing-and-ligh-f7235945
