@@ -42,6 +42,9 @@ function replaceOfficeVisual(root: THREE.Group, key: IndustrialAssetKey, scale: 
   void loadIndustrialAsset(key).then(({ scene }) => {
     if (!root.parent) return;
     scene.scale.set(scale[0], scale[1], scale[2]);
+    // Os GLBs de cadeira usam +Z como lado do usuário; o posto de trabalho
+    // deste escritório posiciona o usuário olhando para -Z. Corrige no próprio asset.
+    if (key === 'officeTaskChair') scene.rotation.y = Math.PI;
     root.clear();
     root.add(scene);
   }).catch((error) => {
@@ -463,7 +466,7 @@ export function buildOffice() {
   // passar por cima das estações dos vendedores da recepção (x=-18).
   const loungeDefs: { seed: number; path: [number, number][]; seat: [number, number]; seatY: number; seatAng: number; period: number; phase: number; sitDur: number }[] = [
     // senta no sofá — caminho direto, nunca cruza x=-18 (fica à esquerda dele o tempo todo)
-    { seed: 52, path: [[-20.5, -3.0], [-18.6, 4.6]], seat: [-18.6, 4.6], seatY: 0.12 + 0.44, seatAng: Math.PI / 2, period: 46, phase: 5, sitDur: 14 },
+    { seed: 52, path: [[-20.5, -3.0], [-18.6, 4.6]], seat: [-18.6, 4.6], seatY: 0.12 + 0.44, seatAng: -Math.PI / 2, period: 46, phase: 5, sitDur: 14 },
     // senta na poltrona de espera (wc1) — anda até x=-18 na faixa livre (z=-3.0, entre as
     // 2 estações da recepção) e só então segue em diagonal até a poltrona
     { seed: 64, path: [[-20.5, -3.0], [-18.0, -3.0], [-15.6, 2.9]], seat: [-15.6, 2.9], seatY: 0.12 + 0.50, seatAng: Math.PI / 2, period: 40, phase: 22, sitDur: 11 },
