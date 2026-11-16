@@ -9,7 +9,7 @@ const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (
 
 const M_STATUS = { run: ['Operando', '#394454'], idle: ['Parada', '#98a1ad'], down: ['Com falha', '#f26a1b'] } as const;
 const S_STATUS = { online: ['Disponível', '#394454'], busy: ['Em atendimento', '#f26a1b'], away: ['Ausente', '#98a1ad'] } as const;
-const TYPE_LABEL = { laser: 'Corte a laser', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC', robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita' } as const;
+const TYPE_LABEL = { laser: 'Corte a laser', plasma: 'Corte a plasma', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC', robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita' } as const;
 type LotState = 'empty' | 'critical' | 'full' | 'medium' | 'low';
 const LOT_STYLES: Record<LotState, { label: string; color: string; glyph: string }> = {
   empty: { label: 'Sem estoque', color: '#9aa5b8', glyph: '—' },
