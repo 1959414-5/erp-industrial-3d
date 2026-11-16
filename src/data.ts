@@ -19,7 +19,7 @@ export interface Dataset {
 const MATERIALS = [{ n: 'Aço carbono SAE 1020', d: 7.85, p: 7.2 }, { n: 'Aço galvanizado', d: 7.85, p: 9.4 }, { n: 'Aço inox 304', d: 7.93, p: 24 }, { n: 'Alumínio 5052', d: 2.68, p: 21 }];
 const THICK = [1.5, 2, 3, 4.75, 6.35];
 const rnd = (i: number) => Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1;
-const occupancy = Array.from({ length: 48 }, (_, i) => rnd(i));
+const occupancy = Array.from({ length: 42 }, (_, i) => rnd(i));
 const lots: Lot[] = occupancy.map((o, i) => {
   const m = MATERIALS[Math.floor(rnd(i + 50) * MATERIALS.length)], th = THICK[Math.floor(rnd(i + 90) * THICK.length)];
   const qty = Math.round(o * 180), kg = qty * 2.5 * th * m.d;
