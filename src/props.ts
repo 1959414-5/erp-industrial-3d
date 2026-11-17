@@ -553,7 +553,9 @@ export function buildExpedition(): THREE.Group {
   // Estantes laterais com dois módulos de profundidade e três níveis de armazenagem.
   const buildDispatchRacks = (x: number, side: -1 | 1) => {
     const rack = new THREE.Group();
-    for (let bay = 0; bay < 2; bay++) {
+    // O lado oeste mantém o segundo vão livre para a saída lateral da empilhadeira.
+    const bayCount = side < 0 ? 1 : 2;
+    for (let bay = 0; bay < bayCount; bay++) {
       const z = -3.95 - bay * 3.0;
       for (const y of [0.55, 1.58, 2.62]) {
         rack.add(
