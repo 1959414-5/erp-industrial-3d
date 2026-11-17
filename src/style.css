@@ -1075,3 +1075,109 @@ body.presentation-mode .scene-tools{right:14px;top:14px}
   body.presentation-mode .factory-minimap{display:block;right:8px;bottom:8px}
   body.presentation-mode .scene-tools{right:8px;top:8px}
 }
+
+
+/* Fase 3: assistente em destaque e alertas integrados ao ambiente 3D */
+#aibtn.ai-launch{
+  display:flex;align-items:center;gap:9px;min-height:39px;padding:5px 10px 5px 7px;
+  border:1px solid rgba(255,255,255,.2);border-radius:9px;
+  background:linear-gradient(135deg,#253449 0%,#172536 58%,#26394e 100%);
+  color:#fff;box-shadow:0 6px 18px rgba(22,37,56,.24),inset 0 1px 0 rgba(255,255,255,.1);
+  font:inherit;text-align:left;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+#aibtn.ai-launch:hover{
+  transform:translateY(-1px);border-color:rgba(242,118,47,.68);
+  box-shadow:0 9px 24px rgba(22,37,56,.3),0 0 0 3px rgba(239,118,47,.12);
+}
+#aibtn.ai-launch.on{
+  background:linear-gradient(135deg,#182738,#303f54);
+  border-color:rgba(239,118,47,.65);box-shadow:0 0 0 2px rgba(239,118,47,.12),0 8px 20px rgba(22,37,56,.24);
+}
+.ai-launch-mark{
+  display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;border-radius:7px;
+  background:linear-gradient(145deg,#ff9a52,#e75a2c);color:white;font-size:18px;
+  box-shadow:0 4px 12px rgba(231,90,44,.28);
+}
+.ai-launch-copy{display:grid;gap:2px;min-width:0}
+.ai-launch-copy b{font-size:9.5px;line-height:1.1;font-weight:800;letter-spacing:.015em}
+.ai-launch-copy small{font-size:7px;line-height:1.1;color:#aebdce;white-space:nowrap}
+.ai-launch-count{
+  max-width:94px;margin-left:3px;padding:4px 6px;border:1px solid rgba(245,158,89,.28);
+  border-radius:5px;background:rgba(239,118,47,.13);color:#ffbd8e;
+  font-size:6.5px;font-weight:800;line-height:1.1;text-align:center;white-space:normal;
+}
+#ai{
+  right:400px;top:66px;bottom:12px;width:410px;max-width:calc(100vw - 48px);
+  border:1px solid rgba(255,255,255,.86);border-radius:14px;
+  background:rgba(248,250,252,.97);box-shadow:0 18px 50px rgba(21,35,54,.23);
+  backdrop-filter:blur(22px) saturate(1.2);
+}
+.ai-head{
+  align-items:center;padding:15px 16px 12px;
+  border-bottom:1px solid rgba(148,163,184,.2);
+  background:linear-gradient(120deg,#1d2b3d 0%,#27394e 70%,#35485d 100%);
+}
+.ai-head-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.ai-head-icon{
+  display:grid;place-items:center;width:37px;height:37px;flex:0 0 37px;border-radius:10px;
+  background:linear-gradient(145deg,#ff9b56,#e65c2d);color:#fff;font-size:22px;
+  box-shadow:0 5px 16px rgba(230,92,45,.28);
+}
+.ai-head-brand b{display:block;color:#fff;font-size:12px;font-weight:800;letter-spacing:-.01em}
+.ai-head-brand small{display:block;margin-top:4px;color:#b8c6d6;font-size:8px;line-height:1.3}
+.ai-head-brand small.live{color:#83e0b2}
+.ai-head-tools{display:flex;align-items:center;gap:9px}
+.ai-head-label{padding:5px 7px;border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#b9c7d7;font-size:6px;font-weight:850;letter-spacing:.12em;white-space:nowrap}
+.ai-head .x{
+  display:grid;place-items:center;width:27px;height:27px;border:1px solid rgba(255,255,255,.16);
+  border-radius:7px;background:rgba(255,255,255,.08);color:#eef3f8;font-size:17px;
+}
+.ai-head .x:hover{background:rgba(255,255,255,.18);color:#fff}
+.ai-statusline{
+  display:flex;align-items:center;gap:7px;min-height:31px;padding:0 16px;
+  border-bottom:1px solid #e9edf1;background:#f1f5f8;color:#748191;font-size:7.5px;
+}
+.ai-statusline>i{width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:#29a875;box-shadow:0 0 0 3px rgba(41,168,117,.12)}
+.ai-statusline>b{margin-left:auto;color:#df6d32;font-size:7px;font-weight:800;white-space:nowrap}
+.ai-body{padding:13px 14px;gap:10px}
+.ai-msg{border-radius:11px;padding:10px 12px;font-size:10.5px;line-height:1.55}
+.ai-msg.bot{border-color:#e2e8ee;box-shadow:0 3px 10px rgba(31,47,67,.055)}
+.ai-msg.user{background:linear-gradient(135deg,#29394e,#1d2b3d)}
+.ai-msg .muted{font-size:9px;color:#7d8997}
+.ai-ins{gap:7px;margin:10px 0}
+.ai-card{position:relative;gap:5px;padding:9px 10px 9px 12px;border:1px solid #e8edf1;border-left:3px solid #9aa5b8;border-radius:8px;background:#fff}
+.ai-card>div{font-size:9.5px;line-height:1.35;color:#354253}
+.ai-card small{font-size:8.5px;line-height:1.45;color:#728092}
+.ai-card.critical{border-color:#f2d0ce;border-left-color:#dc4b4b;background:linear-gradient(120deg,#fff8f7,#fff)}
+.ai-card.warn{border-color:#f3dfd0;border-left-color:#ed8742;background:linear-gradient(120deg,#fffaf5,#fff)}
+.ai-card.info{border-color:#dce7f4;border-left-color:#548ac5;background:#fbfdff}
+.ai-card button,.ai-acts button{
+  padding:5px 9px;border:1px solid #f0d2c1;border-radius:6px;background:#fff5ee;
+  color:#a84f27;font-size:8px;font-weight:800;
+}
+.ai-card button:hover,.ai-acts button:hover{background:#ffe7d8;border-color:#edb18e}
+.ai-chart{border:1px solid #e7edf2;background:#f6f8fa;border-radius:9px}
+.ai-chips{padding:7px 14px 8px}
+.ai-chips button{padding:6px 9px;border-radius:7px;border-color:#dfe5eb;background:#fff;color:#465465;font-size:8px}
+.ai-chips button:hover{background:#fff4ed;border-color:#edb18e;color:#a84f27}
+.ai-form{padding:9px 13px 13px;border-top:1px solid #e9edf1;background:rgba(255,255,255,.94)}
+.ai-form input{min-height:37px;padding:8px 13px;border-color:#dce3e9;border-radius:9px;background:#f8fafb;font-size:9px}
+.ai-form input:focus{border-color:#e77a43;box-shadow:0 0 0 3px rgba(231,122,67,.12)}
+.ai-form button[type=submit]{width:37px;height:37px;border-radius:9px;background:linear-gradient(145deg,#f18a4b,#db562d);box-shadow:0 4px 11px rgba(219,86,45,.2)}
+.ai-form .ai-mbtn{width:37px;height:37px;border-radius:9px;background:#f6f8fa;border-color:#dce3e9}
+.ai-models{border-color:#dfe6ed;border-radius:11px;box-shadow:0 16px 42px rgba(21,35,54,.22)}
+body.presentation-mode #ai{display:none!important}
+@media(max-width:900px){
+  #ai{left:auto;right:10px;top:62px;bottom:10px;width:min(410px,calc(100vw - 78px))}
+}
+@media(max-width:520px){
+  #aibtn.ai-launch{min-height:32px;gap:6px;padding:3px 6px}
+  .ai-launch-mark{width:24px;height:24px;flex-basis:24px;font-size:15px}
+  .ai-launch-copy b{font-size:8px}
+  .ai-launch-copy small,.ai-launch-count{display:none}
+  #aibtn.ai-launch:after{content:"IA";font-size:8px;font-weight:850;color:#fff}
+  #ai{left:6px;right:6px;top:56px;bottom:6px;width:auto;max-width:none}
+  .ai-head{padding:11px 12px 9px}
+  .ai-statusline{padding:0 12px}
+  .ai-body{padding:10px}
+}
