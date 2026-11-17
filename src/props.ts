@@ -359,12 +359,8 @@ export function buildExpedition(): THREE.Group {
     g.add(b(0.18, 4.25, 0.18, depotFrame, x, 0.12, -9.21));
     g.add(b(0.16, 4.05, 0.16, depotFrame, x, 0.12, -2.42));
   }
-  for (const z of [-2.45, -4.75, -7.05, -9.22]) {
-    g.add(b(14.1, 0.16, 0.16, depotFrame, 0, 4.28, z));
-  }
-  for (const x of [-6.8, -3.4, 0, 3.4, 6.8]) {
-    g.add(b(0.09, 0.1, 6.75, depotFrame, x, 4.18, -5.7));
-  }
+  // Cobertura aberta: sem vigas superiores cruzando o campo de visão da câmera.
+  // As colunas laterais permanecem para marcar o limite físico do depósito.
 
   // Guias internas curtas; terminam antes da área de staging e não cruzam o corredor central.
   const lanePaint = std(0xe5c24a, 0.72);
