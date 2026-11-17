@@ -333,70 +333,95 @@ export function buildExpedition(): THREE.Group {
     const p = buildPallet(w); p.scale.setScalar(0.82); p.position.set(x, 0.77, z); g.add(p);
   }
 
-  // DEPÓSITO AUXILIAR DE EXPEDIÇÃO — anexo lateral, independente do estoque de chapas.
-  // Frente aberta para o pátio, com estrutura superior aparente para não esconder o interior.
-  const depotX = 8.25;
-  const depotFloor = std(0xcbd2d9, 0.86), depotWall = std(0xf2f4f6, 0.88);
-  const depotFrame = std(0x526171, 0.5, 0.45), depotShelf = std(0x394454, 0.58, 0.2);
-  const depotBoxA = std(0xc49a68, 0.9), depotBoxB = std(0xd8b782, 0.9);
-  g.add(b(4.8, 0.12, 5.35, depotFloor, depotX, 0, 0.65));
-  // paredes laterais e fundo
-  g.add(
-    b(0.16, 3.45, 5.25, depotWall, 5.82, 0.12, 0.65),
-    b(0.16, 3.45, 5.25, depotWall, 10.68, 0.12, 0.65),
-    b(4.86, 3.45, 0.16, depotWall, depotX, 0.12, -1.98),
-  );
-  // moldura do vão frontal, mantendo a entrada livre para carrinhos e paletes
-  g.add(
-    b(1.25, 3.0, 0.16, depotWall, 6.45, 0.12, 3.28),
-    b(1.25, 3.0, 0.16, depotWall, 10.05, 0.12, 3.28),
-    b(2.35, 0.32, 0.18, depotWall, depotX, 2.92, 3.28),
-    b(0.12, 3.12, 0.12, depotFrame, 7.02, 0.12, 3.34),
-    b(0.12, 3.12, 0.12, depotFrame, 9.48, 0.12, 3.34),
-  );
-  // vigas de topo, sem telhado maciço para manter o conteúdo visível na câmera 3D
-  g.add(
-    b(5.0, 0.14, 0.16, depotFrame, depotX, 3.55, -1.96),
-    b(0.16, 0.14, 5.35, depotFrame, 5.82, 3.55, 0.65),
-    b(0.16, 0.14, 5.35, depotFrame, 10.68, 3.55, 0.65),
-  );
-  // persiana recolhida acima do vão de acesso
-  for (let i = 0; i < 5; i++) {
-    g.add(b(2.25, 0.045, 0.035, depotFrame, depotX, 3.0 + i * 0.07, 3.16));
-  }
-  const depotSign = signBoard('DEPÓSITO');
-  depotSign.position.set(depotX, 3.9, 3.38);
-  g.add(depotSign);
+  // DEPÓSITO DE EXPEDIÇÃO — continuação do galpão, diretamente atrás dos dois portões.
+  // Estende o espaço para z negativo a partir da parede das docas (z=-2), sem ocupar o pátio.
+  const depotFloor = std(0xcbd2d9, 0.92);
+  const depotWall = std(0xe8edf1, 0.82);
+  const depotFrame = std(0x465668, 0.5, 0.28);
+  const depotShelf = std(0x344454, 0.56, 0.12);
+  const depotBoxA = std(0xc79a64, 0.9);
+  const depotBoxB = std(0xd8b782, 0.9);
+  const depotBoxC = std(0xbfcbd4, 0.72, 0.02);
 
-  // estantes internas leves com caixas, filme stretch e consumíveis cenográficos
-  for (let level = 0; level < 3; level++) {
-    const y = 0.65 + level * 0.92;
-    g.add(
-      b(2.75, 0.075, 0.78, depotShelf, 9.48, y, -1.12),
-      b(0.08, 0.88, 0.82, depotFrame, 8.12, y - 0.02, -1.12),
-      b(0.08, 0.88, 0.82, depotFrame, 10.84, y - 0.02, -1.12),
-    );
+  // Piso ligado diretamente aos dois vãos de carregamento.
+  g.add(b(14.2, 0.16, 12.2, depotFloor, 0, -0.02, -8.12));
+
+  // Fechamento lateral e de fundo. A parede dos portões continua sendo a fachada de acesso.
+  g.add(
+    b(0.18, 4.25, 12.2, depotWall, -7.1, 0.12, -8.12),
+    b(0.18, 4.25, 12.2, depotWall, 7.1, 0.12, -8.12),
+    b(14.2, 4.25, 0.18, depotWall, 0, 0.12, -14.22),
+  );
+
+  // Estrutura superior do mesmo galpão, sem cobertura opaca para preservar a leitura da câmera 3D.
+  for (const x of [-7.0, -3.55, 0, 3.55, 7.0]) {
+    g.add(b(0.18, 4.25, 0.18, depotFrame, x, 0.12, -14.08));
+    g.add(b(0.16, 4.05, 0.16, depotFrame, x, 0.12, -2.42));
+  }
+  for (const z of [-2.45, -6.25, -10.15, -14.0]) {
+    g.add(b(14.1, 0.16, 0.16, depotFrame, 0, 4.28, z));
+  }
+  for (const x of [-6.8, -3.4, 0, 3.4, 6.8]) {
+    g.add(b(0.09, 0.1, 11.6, depotFrame, x, 4.18, -8.1));
+  }
+
+  // Faixas internas conduzem os volumes dos portões até a área de staging.
+  const lanePaint = std(0xe5c24a, 0.72);
+  for (const x of [-2.8, 2.8]) {
+    g.add(b(0.055, 0.018, 8.4, lanePaint, x, 0.075, -8.0));
+    g.add(b(1.15, 0.018, 0.055, lanePaint, x, 0.075, -12.15));
+  }
+  g.add(b(12.8, 0.018, 0.08, std(0xe96b2c, 0.55), 0, 0.075, -13.55));
+
+  // Estantes metálicas nas laterais, mantendo livre o corredor central.
+  const buildDispatchRacks = (x: number, side: -1 | 1) => {
+    const rack = new THREE.Group();
     for (let bay = 0; bay < 3; bay++) {
-      const x = 8.55 + bay * 0.88;
-      const boxMaterial = (level + bay) % 2 ? depotBoxA : depotBoxB;
-      g.add(b(0.72, 0.48, 0.65, boxMaterial, x, y + 0.08, -1.12));
-      g.add(b(0.08, 0.012, 0.66, depotFrame, x, y + 0.42, -1.12));
+      const z = -5.4 - bay * 3.45;
+      for (const y of [0.55, 1.58, 2.62]) {
+        rack.add(
+          b(0.11, 0.12, 2.85, depotShelf, x, y, z),
+          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z - 1.38),
+          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z + 1.38),
+        );
+      }
+      for (let item = 0; item < 2; item++) {
+        const material = (bay + item) % 3 === 0 ? depotBoxC : (bay + item) % 2 ? depotBoxA : depotBoxB;
+        const itemZ = z + (item ? 0.66 : -0.66);
+        rack.add(
+          b(0.78, 0.66, 0.82, material, x - side * 0.08, 1.0, itemZ),
+          b(0.78, 0.66, 0.82, material, x - side * 0.08, 2.04, itemZ),
+        );
+      }
     }
-  }
-  // palete e caixas de apoio próximos à entrada, fora da faixa de circulação
-  const depotPallet = buildPallet(false);
-  depotPallet.scale.set(0.95, 0.9, 0.95);
-  depotPallet.position.set(7.0, 0.12, 1.5);
-  g.add(depotPallet);
-  const depotRoll = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.32, 0.32, 0.56, 18),
-    std(0xbfcbd5, 0.62, 0.04),
-  );
-  depotRoll.rotation.z = Math.PI / 2;
-  depotRoll.position.set(9.45, 0.52, 1.55);
-  g.add(depotRoll);
-  g.add(b(0.62, 0.08, 0.62, depotFrame, 9.45, 0.12, 1.55));
+    g.add(rack);
+  };
+  buildDispatchRacks(-5.75, -1);
+  buildDispatchRacks(5.75, 1);
 
+  // Staging central: paletes embalados prontos para seguir às docas.
+  const stagingPositions: [number, number, boolean][] = [
+    [-2.65, -10.65, true], [0, -10.65, false], [2.65, -10.65, true],
+    [-2.65, -7.65, false], [2.65, -7.65, true],
+  ];
+  for (const [x, z, wrapped] of stagingPositions) {
+    const pallet = buildPallet(wrapped);
+    pallet.scale.set(0.9, 0.9, 0.9);
+    pallet.position.set(x, 0.08, z);
+    g.add(pallet);
+  }
+
+  // Bancada de conferência e identificação de volumes no fundo do galpão.
+  g.add(
+    b(2.0, 0.92, 0.82, depotFrame, 0, 0.48, -13.0),
+    b(2.08, 0.08, 0.9, depotShelf, 0, 0.98, -13.0),
+    b(0.72, 0.06, 0.42, depotBoxC, -0.42, 1.08, -13.0),
+    b(0.52, 0.06, 0.42, depotBoxB, 0.42, 1.08, -13.0),
+  );
+  const depotSign = signBoard('DEPÓSITO DE EXPEDIÇÃO');
+  depotSign.scale.set(1.18, 1.0, 1);
+  depotSign.position.set(0, 3.42, -14.08);
+  g.add(depotSign);
   // caminhão removido daqui — agora é animado externamente (scene.ts)
 
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
