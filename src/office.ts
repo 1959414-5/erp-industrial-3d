@@ -71,6 +71,35 @@ function woodFloorTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Papel de parede em linho claro, com textura vertical discreta que combina com o piso de madeira. */
+function wallpaperTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = '#eee7db'; c.fillRect(0, 0, 256, 256);
+
+  // Trama de linho muito sutil.
+  for (let y = 0; y < 256; y += 4) {
+    c.strokeStyle = y % 8 === 0 ? 'rgba(120,101,78,.045)' : 'rgba(255,255,255,.18)';
+    c.lineWidth = 1; c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(256, y + 0.5); c.stroke();
+  }
+  for (let x = 0; x < 256; x += 8) {
+    c.strokeStyle = x % 32 === 0 ? 'rgba(155,128,96,.10)' : 'rgba(155,128,96,.035)';
+    c.lineWidth = x % 32 === 0 ? 1.2 : 0.7;
+    c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, 256); c.stroke();
+  }
+
+  // Linhas decorativas orgânicas, quase imperceptíveis, evitando um padrão excessivo.
+  c.strokeStyle = 'rgba(174,145,111,.07)'; c.lineWidth = 1.1;
+  for (let x = 18; x < 256; x += 64) {
+    c.beginPath(); c.moveTo(x, 12); c.bezierCurveTo(x + 5, 72, x - 4, 166, x + 2, 244); c.stroke();
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 /** Tela de recepção com mensagem institucional neutra e identidade visual da plataforma. */
 function buildReceptionDisplay(): THREE.Group {
   const g = new THREE.Group();
@@ -366,8 +395,24 @@ export function buildOffice() {
   const aluFrame = std(0x18181b, 0.35, 0.65);
 
   const WH = 4.0; // altura das paredes do escritório
-  // parede traseira sólida (z = -9.5)
+  const wallpaperMap = wallpaperTexture();
+  const addWallpaper = (width: number, height: number, x: number, y: number, z: number, rotationY = 0) => {
+    const map = wallpaperMap.clone();
+    map.wrapS = THREE.RepeatWrapping; map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(Math.max(1, width / 1.35), Math.max(1, height / 1.35));
+    map.needsUpdate = true;
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshStandardMaterial({ map, roughness: 0.96, metalness: 0 }),
+    );
+    panel.position.set(x, y, z);
+    panel.rotation.y = rotationY;
+    panel.receiveShadow = true;
+    group.add(panel);
+  };
+  // parede traseira sólida (z = -9.5), revestida pelo lado interno.
   group.add(b(OW, WH, 0.15, solidW, 0, 0.12, -OD / 2));
+  addWallpaper(OW - 0.22, WH - 0.16, 0, 2.12, -9.418);
   // parede frontal de vidro (z = +9.5)
   group.add(b(OW, WH, 0.06, glassW, 0, 0.12, OD / 2));
   // montantes de alumínio na frente
@@ -376,6 +421,7 @@ export function buildOffice() {
   }
   // parede esquerda (x = -21.75) com abertura de porta em z ≈ -4.5
   group.add(b(0.15, WH, 4.5, solidW, -OW / 2, 0.12, -7.25));  // trecho superior
+  addWallpaper(4.34, WH - 0.16, -21.662, 2.12, -7.25, Math.PI / 2);
   group.add(b(0.15, 0.6, 3.2, aluFrame, -OW / 2, 3.52, -4.5));  // verga da porta
   group.add(b(0.06, WH, 11.5, glassW, -OW / 2, 0.12, 3.75));   // vidro lateral inferior
   // parede direita de vidro (x = +21.75)
@@ -384,6 +430,9 @@ export function buildOffice() {
   // ── divisórias internas (x = -7.75 e x = +8.25) ──────────────
   for (const dx of [-7.75, 8.25]) {
     group.add(b(0.12, WH, 4.5, solidW, dx, 0.12, -7.25));   // trecho atrás
+    // Papel de parede nos dois lados da divisória, visível nas salas vizinhas.
+    addWallpaper(4.34, WH - 0.16, dx + 0.067, 2.12, -7.25, Math.PI / 2);
+    addWallpaper(4.34, WH - 0.16, dx - 0.067, 2.12, -7.25, -Math.PI / 2);
     group.add(b(0.12, 0.6, 3.2, aluFrame, dx, 3.52, -4.5));  // verga de porta
     group.add(b(0.06, WH, 11.5, glassW, dx, 0.12, 3.75));   // vidro p/ frente
   }
@@ -422,7 +471,8 @@ export function buildOffice() {
   // Tapetes delimitam somente áreas de permanência, deixando o piso amadeirado visível.
   group.add(
     b(7.3, 0.018, 7.1, std(0xd8cdbd, 0.98), -17.25, 0.12, 5.0),
-    b(8.8, 0.022, 4.7, std(0xcfc4b3, 0.98), -1.45, 0.12, 6.85),
+    // Tapete da copa acompanha o novo eixo de 90° do conjunto de descanso.
+    b(4.7, 0.022, 7.5, std(0xcfc4b3, 0.98), -2.0, 0.12, 5.8),
     b(11.8, 0.018, 8.7, std(0xd8dce0, 0.98), 15, 0.12, 0),
   );
 
@@ -474,25 +524,30 @@ export function buildOffice() {
   // armários de arquivos
   const cabB1 = buildCabinet(0.9, 1.7, 0.5); cabB1.position.set(1, 0.12, -8.9); group.add(cabB1); ed('cabinet-backoffice-1', cabB1);
   const cabB2 = buildCabinet(0.9, 1.7, 0.5); cabB2.position.set(2.9, 0.12, -8.9); group.add(cabB2); ed('cabinet-backoffice-2', cabB2);
-  // COPA E DESCANSO — substitui as cadeiras soltas por um lounge e uma estação de café.
+  // COPA E DESCANSO — o conjunto foi girado 90° para organizar melhor a circulação.
+  const breakZone = new THREE.Group();
+  breakZone.position.set(-2.0, 0.14, 5.8);
+  breakZone.rotation.y = Math.PI / 2;
+  group.add(breakZone);
+
   const loungeSofa = new THREE.Group();
   loungeSofa.add(buildSofa(2.35, 0x52677d));
-  loungeSofa.position.set(-2.0, 0.14, 5.65);
-  group.add(loungeSofa); ed('break-sofa', loungeSofa);
+  loungeSofa.position.set(0, 0, -0.65);
+  breakZone.add(loungeSofa); ed('break-sofa', loungeSofa);
   replaceOfficeVisual(loungeSofa, 'officeSofa', [1.28, 1.0, 1.0]);
 
   const loungeTable = buildCoffeeTable();
   loungeTable.scale.set(1.45, 1, 1.35);
-  loungeTable.position.set(-2.0, 0.14, 7.0);
-  group.add(loungeTable); ed('break-table', loungeTable);
+  loungeTable.position.set(0, 0, 0.7);
+  breakZone.add(loungeTable); ed('break-table', loungeTable);
 
   const loungeChairA = new THREE.Group(); loungeChairA.add(buildWaitChair(0x52677d));
-  loungeChairA.position.set(-4.65, 0.14, 7.05); loungeChairA.rotation.y = -Math.PI / 2;
-  group.add(loungeChairA); ed('break-chair-a', loungeChairA);
+  loungeChairA.position.set(-2.65, 0, 0.75); loungeChairA.rotation.y = -Math.PI / 2;
+  breakZone.add(loungeChairA); ed('break-chair-a', loungeChairA);
   replaceOfficeVisual(loungeChairA, 'officeLoungeChair');
   const loungeChairB = new THREE.Group(); loungeChairB.add(buildWaitChair(0x52677d));
-  loungeChairB.position.set(0.65, 0.14, 7.05); loungeChairB.rotation.y = Math.PI / 2;
-  group.add(loungeChairB); ed('break-chair-b', loungeChairB);
+  loungeChairB.position.set(2.65, 0, 0.75); loungeChairB.rotation.y = Math.PI / 2;
+  breakZone.add(loungeChairB); ed('break-chair-b', loungeChairB);
   replaceOfficeVisual(loungeChairB, 'officeLoungeChair');
 
   const coffee = buildCoffeeStation();
@@ -645,7 +700,7 @@ export function buildOffice() {
     { seed: 52, path: [[-20.5, -3.0], [-18.6, 4.6]], seat: [-18.6, 4.6], seatY: 0.12 + 0.44, seatAng: -Math.PI / 2, period: 46, phase: 5, sitDur: 14 },
     // senta na poltrona de espera (wc1) — anda até x=-18 na faixa livre (z=-3.0, entre as
     // 2 estações da recepção) e só então segue em diagonal até a poltrona
-    { seed: 64, path: [[-20.5, -3.0], [-18.0, -3.0], [-15.6, 2.9]], seat: [-15.6, 2.9], seatY: 0.12 + 0.50, seatAng: Math.PI / 2, period: 40, phase: 22, sitDur: 11 },
+    { seed: 64, path: [[-20.5, -3.0], [-18.0, -3.0], [-15.6, 2.9]], seat: [-15.72, 2.9], seatY: 0.12 + 0.48, seatAng: -Math.PI / 2, period: 40, phase: 22, sitDur: 11 },
   ];
   for (const ld of loungeDefs) {
     const path = ld.path.map(([x, z]) => new THREE.Vector2(x, z));
