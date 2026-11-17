@@ -193,6 +193,7 @@ function startApplication(data: Dataset) {
   const factory = new Factory(document.getElementById('scene') as HTMLCanvasElement);
   (window as any).__factory = factory;
   factory.setMachines(data.machines);
+  factory.setSellers(data.sellers);
   const lotStates = data.lots.map((lot, index) => {
     const occupancy = data.occupancy[index] ?? 0;
     if (occupancy < 0.15 || lot.qty <= 0) return 'empty';

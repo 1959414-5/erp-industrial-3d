@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { Machine, MachineType, Selection, TabKey } from './data';
+import type { Machine, MachineType, Selection, Seller, TabKey } from './data';
 import { buildMachine, type MachineModel } from './machines';
 import { SheetLots } from './stock';
 import { buildOffice } from './office';
@@ -65,6 +65,7 @@ export class Factory {
   private lots = new SheetLots();
   private office = buildOffice();
   private props: Prop[] = [];
+  private customers: Prop[] = [];
   private assetMixers: THREE.AnimationMixer[] = [];
   private operators: Prop[] = [];
   private machineProps: THREE.Object3D[] = [];
@@ -234,7 +235,9 @@ export class Factory {
         depart: [[-10.5, 24], [-10, 33], [-10, 36], [-10, 51], [63, 51]] },
     ];
     for (const c of customers) {
-      const cu = buildCustomer(c); this.props.push(cu); this.scene.add(cu.group);
+      const cu = buildCustomer(c);
+      this.customers.push(cu);
+      this.props.push(cu); this.scene.add(cu.group);
     }
 
     // ── placas de setor ──────────────────────────────────────────
@@ -538,6 +541,11 @@ export class Factory {
     });
   }
   setOccupancy(values: number[], states: string[] = []) { this.lots.setOccupancy(values, states); }
+  setSellers(sellers: Seller[]) {
+    this.office.setSellerNames(sellers.map((seller) => seller.name));
+    // Os dois visitantes que chegam de carro recebem os nomes de clientes já presentes no Dataset.
+    this.customers.forEach((customer, index) => customer.setLabel?.(sellers[index]?.topClient ?? 'Cliente'));
+  }
   focus(tab: TabKey) { this.goal = { pos: FOCUS[tab].pos.clone(), target: FOCUS[tab].target.clone() }; }
   focusSector(sector: FactorySector) {
     const view = sector === 'expedicao' ? EXPEDITION_FOCUS : FOCUS[sector];

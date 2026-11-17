@@ -32,10 +32,36 @@ function plant(x: number, z: number): THREE.Group {
 /** Plaquinha de texto. */
 function labelBoard(txt: string): THREE.Mesh {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64; const c = cv.getContext('2d')!;
-  c.clearRect(0, 0, 512, 64); c.fillStyle = '#1f2a44'; c.font = 'bold 42px Inter, Arial';
+  c.clearRect(0, 0, 512, 64); c.fillStyle = '#1f2a44'; c.font = '700 42px "IBM Plex Sans", Arial';
   c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 256, 34);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.64), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
+}
+interface SellerNameplate {
+  sprite: THREE.Sprite;
+  setName(name: string): void;
+}
+function buildSellerNameplate(): SellerNameplate {
+  const cv = document.createElement('canvas'); cv.width = 440; cv.height = 76;
+  const c = cv.getContext('2d')!;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, toneMapped: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1.52, 0.26, 1);
+  sprite.renderOrder = 12;
+  const setName = (name: string) => {
+    c.clearRect(0, 0, cv.width, cv.height);
+    if (!name) { sprite.visible = false; tex.needsUpdate = true; return; }
+    c.fillStyle = 'rgba(25,39,56,0.96)';
+    c.fillRect(0, 0, cv.width, cv.height);
+    c.fillStyle = '#e96b2c'; c.fillRect(0, 0, 9, cv.height);
+    c.fillStyle = '#f7f9fc'; c.font = '650 31px "IBM Plex Sans", Arial';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(name.toLocaleUpperCase('pt-BR'), 228, 39, 398);
+    sprite.visible = true; tex.needsUpdate = true;
+  };
+  sprite.visible = false;
+  return { sprite, setName };
 }
 /** Troca apenas o visual interno de um móvel, preservando seu root, posição e ID editável. */
 function replaceOfficeVisual(root: THREE.Group, key: IndustrialAssetKey, scale: [number, number, number] = [1, 1, 1]) {
@@ -238,6 +264,7 @@ interface Lounger {
    ═══════════════════════════════════════════════════════════════════════ */
 export function buildOffice() {
   const group = new THREE.Group(); const seats: Seat[] = []; const sellers: THREE.Group[] = []; const walkers: Walker[] = [];
+  const sellerNameplates: SellerNameplate[] = [];
   const strollers: Stroller[] = []; const loungers: Lounger[] = [];
   const editables: { id: string; object: THREE.Object3D }[] = [];
   const ed = (id: string, object: THREE.Object3D) => editables.push({ id: `office-${id}`, object });
@@ -282,10 +309,38 @@ export function buildOffice() {
   // rótulo COMERCIAL
   const lbl = labelBoard('COMERCIAL'); lbl.scale.set(0.5, 0.5, 1); lbl.position.set(0, 3.42, -OD / 2 + 0.12); group.add(lbl);
 
+  // Entrada principal: portal metálico, cobertura e identificação de recepção.
+  const portalMetal = std(0x303b49, 0.38, 0.5), portalOrange = std(0xe96b2c, 0.42, 0.25);
+  group.add(
+    b(0.16, 3.35, 0.16, portalMetal, -21.48, 0.12, -5.08),
+    b(0.16, 3.35, 0.16, portalMetal, -21.48, 0.12, -1.92),
+    b(0.16, 0.18, 3.32, portalOrange, -21.48, 3.29, -3.5),
+    b(1.35, 0.13, 4.25, portalMetal, -22.18, 3.02, -3.5),
+    b(0.08, 0.07, 4.25, portalOrange, -22.18, 2.94, -3.5),
+  );
+  const entranceSign = labelBoard('RECEPÇÃO');
+  entranceSign.scale.set(0.52, 0.52, 1);
+  entranceSign.position.set(-21.55, 3.58, -3.5);
+  entranceSign.rotation.y = -Math.PI / 2;
+  group.add(entranceSign);
+
+  // Caminho visual da porta até o balcão; mantém livre a faixa de circulação.
+  const entryPath = std(0xe9edf1, 0.96), entryLine = std(0xe96b2c, 0.58);
+  group.add(
+    b(5.45, 0.025, 1.55, entryPath, -18.55, 0.12, -3.5),
+    b(5.45, 0.018, 0.045, entryLine, -18.55, 0.15, -4.26),
+    b(5.45, 0.018, 0.045, entryLine, -18.55, 0.15, -2.74),
+    b(2.1, 0.035, 1.45, std(0x303b49, 0.9), -20.8, 0.15, -3.5),
+  );
+
   // teto removido — bloqueava a visão de cima (overview)
 
-  // tapete sob as estações (sala 2, a mais ampla)
-  group.add(b(14, 0.03, 15, std(0xe2e4e7, 0.95), 0.25, 0.12, 0));
+  // Tapetes setoriais: recepção/espera, backoffice e sala de reunião.
+  group.add(
+    b(7.3, 0.025, 7.1, std(0xe9ecef, 0.96), -17.25, 0.12, 5.0),
+    b(14, 0.03, 15, std(0xe2e4e7, 0.95), 0.25, 0.12, 0),
+    b(11.8, 0.025, 8.7, std(0xe7ebef, 0.96), 15, 0.12, 0),
+  );
 
   // Plantas com folhagem verde em todos os setores; a posição da recepção fica livre para o café.
   group.add(plant(20.5, -8.5), plant(-20.5, 8.5), plant(20.5, 8.5));
@@ -300,6 +355,10 @@ export function buildOffice() {
   const counter = new THREE.Group(); counter.add(buildCounter(5.5));
   counter.position.set(-14.75, 0.12, -6.45); group.add(counter); ed('counter-reception', counter);
   replaceOfficeVisual(counter, 'curvedReceptionDesk');
+  const serviceSign = labelBoard('ATENDIMENTO COMERCIAL');
+  serviceSign.scale.set(0.44, 0.44, 1);
+  serviceSign.position.set(-14.75, 2.75, -9.36);
+  group.add(serviceSign);
   // armário de arquivos
   const cabR = buildCabinet(0.9, 1.7, 0.5); cabR.position.set(-9.6, 0.12, -8.9); group.add(cabR); ed('cabinet-reception', cabR);
   // sofá + mesinha + 2 cadeiras — área de espera no canto frontal
@@ -409,6 +468,10 @@ export function buildOffice() {
       // A cadeira tem encosto no sentido oposto ao corpo sentado.
       s.position.set(sx, 0.12, sz); s.rotation.y = rot + Math.PI; s.add(buildMeetingChair());
     }
+    const nameplate = buildSellerNameplate();
+    nameplate.sprite.position.set(0, n < 8 ? 1.58 : 2.05, n < 8 ? 0.48 : 0.55);
+    s.add(nameplate.sprite);
+    sellerNameplates.push(nameplate);
     group.add(s); sellers.push(s); ed(n < 8 ? `desk-${n}` : `meeting-attendee-${n}`, s);
     const sit = new THREE.Group(); sit.position.set(sx, 0.12, sz); sit.rotation.y = rot;
     const shirt = std(SHIRTS[n % SHIRTS.length], 0.7), skin = std(SKINS[(n * 3 + 1) % SKINS.length], 0.8), pants = std(0x2b3550, 0.8);
@@ -486,7 +549,11 @@ export function buildOffice() {
   }
 
   group.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { group, sellers, editables, update(t: number) {
+  return { group, sellers, editables,
+    setSellerNames(names: string[]) {
+      sellerNameplates.forEach((plate, index) => plate.setName(names[index] ?? ''));
+    },
+    update(t: number) {
     seats.forEach((s) => {
       s.arms.forEach((a, i) => { a.rotation.x = -0.28 + Math.sin(t * 11 + s.ph + i * 2) * 0.05; });
       s.head.rotation.y = Math.sin(t * 0.5 + s.ph) * 0.25; s.head.rotation.x = Math.sin(t * 0.9 + s.ph) * 0.05;

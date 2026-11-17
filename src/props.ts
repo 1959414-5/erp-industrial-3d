@@ -16,7 +16,11 @@ const HATS = [0xffd23f, 0xff8c42, 0xffffff, 0x3b82f6]; // capacetes de EPI
 const SHIRTS = [0x3b82f6, 0xf26a1b, 0x22b573, 0x7c5cfc, 0x1f2a44, 0xe5484d, 0xf5b83d, 0x14b8a6]; // roupas de clientes
 const hash = (n: number) => Math.abs(Math.sin(n * 91.73) * 43758.5453) % 1;
 
-export interface Prop { group: THREE.Group; update(t: number): void }
+export interface Prop {
+  group: THREE.Group;
+  update(t: number): void;
+  setLabel?(text: string): void;
+}
 
 /** Operador de pé com capacete e colete de alta visibilidade. Pequena animação ociosa. */
 export function buildWorker(seed = 0): Prop {
@@ -536,6 +540,35 @@ export function buildCustomer(o: CustomerOpts): Prop {
   const g = new THREE.Group();
   const car = buildCar(o.carColor); g.add(car);
   const civ = buildCivilian(o.seed); civ.group.visible = false; g.add(civ.group);
+  const labelCanvas = document.createElement('canvas'); labelCanvas.width = 520; labelCanvas.height = 112;
+  const labelCtx = labelCanvas.getContext('2d')!;
+  const labelTexture = new THREE.CanvasTexture(labelCanvas); labelTexture.colorSpace = THREE.SRGBColorSpace;
+  const labelMaterial = new THREE.SpriteMaterial({
+    map: labelTexture, transparent: true, depthWrite: false, depthTest: false, toneMapped: false,
+  });
+  const visitorLabel = new THREE.Sprite(labelMaterial);
+  visitorLabel.position.set(0, 2.12, 0);
+  visitorLabel.scale.set(1.85, 0.4, 1);
+  visitorLabel.renderOrder = 15;
+  visitorLabel.visible = false;
+  civ.group.add(visitorLabel);
+  const setLabel = (text: string) => {
+    labelCtx.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
+    if (!text.trim()) { visitorLabel.visible = false; labelTexture.needsUpdate = true; return; }
+    labelCtx.fillStyle = 'rgba(25,39,56,0.96)';
+    roundRect(labelCtx, 3, 3, 514, 106, 18); labelCtx.fill();
+    labelCtx.fillStyle = '#e96b2c';
+    roundRect(labelCtx, 12, 13, 7, 86, 4); labelCtx.fill();
+    labelCtx.fillStyle = 'rgba(220,230,240,0.86)';
+    labelCtx.font = '700 19px "IBM Plex Sans", Arial';
+    labelCtx.textBaseline = 'middle'; labelCtx.textAlign = 'left';
+    labelCtx.fillText('CLIENTE EM ATENDIMENTO', 39, 37, 455);
+    labelCtx.fillStyle = '#ffffff';
+    labelCtx.font = '650 30px "IBM Plex Sans", Arial';
+    labelCtx.fillText(text.toLocaleUpperCase('pt-BR'), 39, 77, 455);
+    visitorLabel.visible = true;
+    labelTexture.needsUpdate = true;
+  };
   const AP = pathInfo(o.approach), WK = pathInfo(o.walk), DP = pathInfo(o.depart);
   const D = o.dur ?? { in: 8, park: 1.5, walk: 5, order: 6, out: 9, idle: 5 };
   const T = D.in + D.park + D.walk + D.order + D.walk + D.out + D.idle;
@@ -547,7 +580,7 @@ export function buildCustomer(o: CustomerOpts): Prop {
     civ.arms[0].rotation.x = -s * 0.5; civ.arms[1].rotation.x = s * 0.5;
     civ.group.position.y = walking ? Math.abs(Math.cos(t * 7 + o.seed)) * 0.04 : 0;
   };
-  return { group: g, update(t: number) {
+  return { group: g, setLabel, update(t: number) {
     const tt = (((t + o.offset) % T) + T) % T;
     const b1 = D.in, b2 = b1 + D.park, b3 = b2 + D.walk, b4 = b3 + D.order, b5 = b4 + D.walk, b6 = b5 + D.out;
     if (tt < b1) {                       // dirigindo até a vaga
