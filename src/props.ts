@@ -285,17 +285,28 @@ export function buildRoamer(path: [number, number][], seed = 0, speed = 1.3): Pr
   } };
 }
 
-/** Placa de setor discreta (poste + plaquinha com texto). */
+/** Placa de setor com moldura, faixa de identificação e texto de alto contraste. */
 export function buildSectorSign(text: string, hex = 0x1f2a44): THREE.Group {
   const g = new THREE.Group();
-  g.add(cyl(0.05, 2.0, std(0x9aa5b8, 0.5), 0, 0, 0, 10));
-  const cv = document.createElement('canvas'); cv.width = 300; cv.height = 76; const c = cv.getContext('2d')!;
-  c.fillStyle = '#' + hex.toString(16).padStart(6, '0'); roundRect(c, 0, 0, 300, 76, 12); c.fill();
-  c.fillStyle = '#fff'; c.font = 'bold 36px Inter, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, 150, 40);
+  g.add(cyl(0.05, 2.0, std(0x778493, 0.55), 0, 0, 0, 10));
+
+  const cv = document.createElement('canvas'); cv.width = 420; cv.height = 120;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = 'rgba(15,24,36,0.98)'; roundRect(c, 2, 2, 416, 116, 16); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.34)'; c.lineWidth = 3;
+  roundRect(c, 3, 3, 414, 114, 15); c.stroke();
+  c.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+  roundRect(c, 12, 13, 12, 94, 6); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.94)';
+  c.font = '800 34px Inter, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(text, 224, 62, 360);
+
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.43), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-  plate.position.set(0, 2.1, 0); const back = plate.clone(); back.rotation.y = Math.PI; g.add(plate, back);
-  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+  const material = new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false });
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.57), material);
+  plate.position.set(0, 2.12, 0);
+  const back = plate.clone(); back.rotation.y = Math.PI;
+  g.add(plate, back);
   return g;
 }
 
