@@ -174,7 +174,7 @@ export function buildExpedition(): THREE.Group {
   const bayCenters = [-2.8, 2.8];
   g.add(
     b(1.1, 4.2, 0.3, wall, -4.95, 0, -2),
-    b(2.1, 4.2, 0.3, wall, 0, 0, -2),
+    b(2.4, 4.2, 0.3, wall, 0, 0, -2),
     b(1.1, 4.2, 0.3, wall, 4.95, 0, -2),
   );
   for (const x of bayCenters) {
@@ -206,16 +206,18 @@ export function buildExpedition(): THREE.Group {
   // Rampa de transição entre o pátio e o nível da doca.
   const rampGeometry = new THREE.BufferGeometry();
   rampGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
-    -4.8, 0.75, 2.18,   4.8, 0.75, 2.18,
-    -4.8, 0.06, 4.75,   4.8, 0.06, 4.75,
-    -4.8, 0.06, 2.18,   4.8, 0.06, 2.18,
+    -4.8, 0.75, 2.18,   4.8, 0.75, 2.18,   // topo: início da rampa
+    -4.8, 0.06, 4.75,   4.8, 0.06, 4.75,   // topo: fim da rampa
+    -4.8, 0.06, 2.18,   4.8, 0.06, 2.18,   // base: início
+    -4.8, 0.06, 4.75,   4.8, 0.06, 4.75,   // base: fim
   ], 3));
   rampGeometry.setIndex([
-    0, 1, 2, 1, 3, 2,       // superfície inclinada
-    4, 2, 5, 5, 2, 3,       // base inferior
-    0, 2, 4, 0, 4, 1,       // lateral esquerda / frente
-    1, 5, 3, 1, 4, 5,       // lateral direita
-    2, 3, 4, 3, 5, 4,       // borda externa
+    0, 2, 1, 1, 2, 3,       // superfície inclinada (normal para cima)
+    4, 5, 6, 5, 7, 6,       // base inferior
+    0, 4, 6, 0, 6, 2,       // lateral esquerda
+    1, 3, 7, 1, 7, 5,       // lateral direita
+    0, 1, 5, 0, 5, 4,       // frente da rampa
+    2, 6, 7, 2, 7, 3,       // borda externa
   ]);
   rampGeometry.computeVertexNormals();
   const ramp = new THREE.Mesh(rampGeometry, dock);
@@ -712,9 +714,11 @@ export function buildYard(): THREE.Mesh {
   // loop externo (retângulo de rua ao redor da fábrica 104×72)
   const L = -66, R = 66, B = -50, F = 50;
   road(L, B, R, B, rw); road(L, F, R, F, rw); road(L, B, L, F, rw); road(R, B, R, F, rw);
-  // conectores: entrada de caminhão pela frente (expedição/doca) — 2 pistas
-  road(-36, F, -36, 36, rw);
-  road(-38, F, -38, 36, rw);
+  // Conector largo de expedição com duas faixas alinhadas aos dois portões.
+  road(-39.3, F, -39.3, 25, rw);
+  road(-33.7, F, -33.7, 25, rw);
+  g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = 4; g.setLineDash([24, 18]);
+  g.beginPath(); g.moveTo(X(-36.5), Z(F)); g.lineTo(X(-36.5), Z(25)); g.stroke(); g.setLineDash([]);
   // entrada de clientes pela frente-centro
   road(-12, F, -12, 36, rw);
   // linhas tracejadas centrais do loop

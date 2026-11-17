@@ -245,12 +245,12 @@ export class Factory {
     // (z=48.5) e pista de SAÍDA (z=51) são sempre linhas distintas, então nenhum caminhão
     // que esteja chegando cruza de frente outro que esteja saindo, mesmo fora de sincronia.
     const truckRoutes: { in: [number,number][]; out: [number,number][]; speed: number; offset: number }[] = [
-      // Cada caminhão faz ré até o centro do seu próprio portão (x=-39.3 e x=-33.7).
-      // O ponto final z=25.25 deixa a traseira do baú alinhada ao plano da doca (z=22.5).
-      { in:  [[63, 48.5], [-39.3, 48.5], [-39.3, 25.25]],
-        out: [[-39.3, 25.25], [-39.3, 51], [63, 51]], speed: 4.1, offset: 0 },
-      { in:  [[63, 47.0], [-33.7, 47.0], [-33.7, 25.25]],
-        out: [[-33.7, 25.25], [-33.7, 52.5], [63, 52.5]], speed: 3.8, offset: 22 },
+      // Cada caminhão usa uma faixa própria que termina exatamente no centro do respectivo portão.
+      // A traseira do baú para em z=22.55, a poucos centímetros do plano da parede em z=22.5.
+      { in:  [[-39.3, 50], [-39.3, 25.25]],
+        out: [[-39.3, 25.25], [-39.3, 50], [63, 50]], speed: 4.1, offset: 0 },
+      { in:  [[-33.7, 50], [-33.7, 25.25]],
+        out: [[-33.7, 25.25], [-33.7, 50], [63, 50]], speed: 3.8, offset: 30 },
     ];
     for (const tr of truckRoutes) {
       const tk = this.buildAnimTruck(tr.in, tr.out, tr.speed, tr.offset);
