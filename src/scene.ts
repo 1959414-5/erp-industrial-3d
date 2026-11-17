@@ -245,10 +245,12 @@ export class Factory {
     // (z=48.5) e pista de SAÍDA (z=51) são sempre linhas distintas, então nenhum caminhão
     // que esteja chegando cruza de frente outro que esteja saindo, mesmo fora de sincronia.
     const truckRoutes: { in: [number,number][]; out: [number,number][]; speed: number; offset: number }[] = [
-      { in:  [[-66, 48.5], [-36, 48.5], [-36, 36], [-36, 27]],
-        out: [[-36, 27], [-36, 36], [-36, 51], [-66, 51]], speed: 4.0, offset: 0 },
-      { in:  [[-66, 48.5], [-38, 48.5], [-38, 36], [-38, 25]],
-        out: [[-38, 25], [-38, 36], [-38, 51], [-66, 51]], speed: 3.5, offset: 24 },
+      // Cada caminhão faz ré até o centro do seu próprio portão (x=-39.3 e x=-33.7).
+      // O ponto final z=25.25 deixa a traseira do baú alinhada ao plano da doca (z=22.5).
+      { in:  [[63, 48.5], [-39.3, 48.5], [-39.3, 25.25]],
+        out: [[-39.3, 25.25], [-39.3, 51], [63, 51]], speed: 4.1, offset: 0 },
+      { in:  [[63, 47.0], [-33.7, 47.0], [-33.7, 25.25]],
+        out: [[-33.7, 25.25], [-33.7, 52.5], [63, 52.5]], speed: 3.8, offset: 22 },
     ];
     for (const tr of truckRoutes) {
       const tk = this.buildAnimTruck(tr.in, tr.out, tr.speed, tr.offset);
@@ -794,13 +796,13 @@ export class Factory {
     const T = driveIn + park + driveOut + idle;
     return { group: g, update(t: number) {
       const tt = (((t + offset) % T) + T) % T;
-      if (tt < driveIn) {                             // chegando
+      if (tt < driveIn) {                             // aproxima em marcha a ré, baú voltado à doca
         truck.visible = true;
-        const s = inS.sample(tt / driveIn); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang;
-      } else if (tt < driveIn + park) {              // estacionado na doca
+        const s = inS.sample(tt / driveIn); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang + Math.PI;
+      } else if (tt < driveIn + park) {              // permanece alinhado no portão para carga/descarga
         truck.visible = true;
         const s = inS.sample(1); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang + Math.PI;
-      } else if (tt < driveIn + park + driveOut) {   // saindo
+      } else if (tt < driveIn + park + driveOut) {   // sai para a frente, sem girar no ponto de doca
         truck.visible = true;
         const s = outS.sample((tt - driveIn - park) / driveOut); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang;
       } else {                                        // fora de cena

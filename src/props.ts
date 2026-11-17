@@ -169,25 +169,68 @@ export function buildExpedition(): THREE.Group {
   const wall = std(0xdfe5ef, 0.8), frame = std(0x9aa5b8, 0.5), door = std(0x3b4660, 0.6);
   const dock = std(0xb8c0cf, 0.7), paint = std(0xf5d04e, 0.9);
 
-  // parede de fundo com 2 portões de doca
-  g.add(b(11, 4.2, 0.3, wall, 0, 0, -2));
-  for (const x of [-2.8, 2.8]) {
-    g.add(b(2.4, 3.0, 0.12, door, x, 0.2, -1.84));
-    g.add(b(2.7, 0.18, 0.14, frame, x, 3.2, -1.82));
-    // ripas do portão basculante
-    for (let i = 0; i < 6; i++) g.add(b(2.3, 0.03, 0.02, frame, x, 0.35 + i * 0.45, -1.77));
+  // Parede traseira segmentada: dois vãos livres para caminhões, com pilares e vergas.
+  // Aberturas centradas em x=-2.8 e x=+2.8, com 3.2 m de largura e 3.35 m de altura.
+  const bayCenters = [-2.8, 2.8];
+  g.add(
+    b(1.1, 4.2, 0.3, wall, -4.95, 0, -2),
+    b(2.1, 4.2, 0.3, wall, 0, 0, -2),
+    b(1.1, 4.2, 0.3, wall, 4.95, 0, -2),
+  );
+  for (const x of bayCenters) {
+    // Verga superior e guias laterais do portão; a área inferior permanece completamente aberta.
+    g.add(
+      b(3.2, 0.85, 0.3, wall, x, 3.35, -2),
+      b(0.12, 3.35, 0.24, frame, x - 1.6, 0, -1.98),
+      b(0.12, 3.35, 0.24, frame, x + 1.6, 0, -1.98),
+    );
+    // Conjunto de lâminas recolhidas junto à verga: indica portão aberto.
+    for (let i = 0; i < 4; i++) {
+      g.add(b(3.0, 0.045, 0.035, door, x, 3.02 + i * 0.075, -1.82));
+    }
+    // Batentes de borracha para encosto do baú.
+    for (const side of [-1, 1]) {
+      g.add(b(0.18, 0.72, 0.14, std(0x252e38, 0.86), x + side * 1.84, 0.12, -1.72));
+    }
   }
-  // placa EXPEDIÇÃO
-  const sign = signBoard('EXPEDIÇÃO'); sign.position.set(0, 3.7, -1.7); g.add(sign);
+  // Placa superior central da expedição.
+  const sign = signBoard('EXPEDIÇÃO'); sign.position.set(0, 3.72, -1.7); g.add(sign);
 
-  // plataforma de doca elevada + rampa + faixa de segurança
-  g.add(b(11, 1.1, 3.2, dock, 0, 0, 0.4));
-  g.add(b(11, 0.03, 0.2, paint, 0, 1.1, 1.9));
-  for (let i = 0; i < 10; i++) g.add(b(0.25, 0.03, 0.2, std(0x1a2236, 0.6), -4.8 + i * 1.07, 1.1, 1.9));
+  // Plataforma de doca rebaixada: o piso do baú fica quase nivelado com a doca.
+  g.add(b(11, 0.75, 4.25, dock, 0, 0, 0.08));
+  g.add(b(11, 0.035, 0.18, paint, 0, 0.75, 2.08));
+  for (let i = 0; i < 10; i++) {
+    g.add(b(0.25, 0.035, 0.18, std(0x1a2236, 0.6), -4.8 + i * 1.07, 0.75, 2.08));
+  }
 
-  // paletes prontos para embarque, sobre a doca
-  const spots: [number, number, boolean][] = [[-3.6, 0.9, true], [-2.2, 0.9, true], [3.4, 0.6, false], [4.4, 0.9, true]];
-  for (const [x, z, w] of spots) { const p = buildPallet(w); p.position.set(x, 1.1, z); g.add(p); }
+  // Rampa de transição entre o pátio e o nível da doca.
+  const rampGeometry = new THREE.BufferGeometry();
+  rampGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    -4.8, 0.75, 2.18,   4.8, 0.75, 2.18,
+    -4.8, 0.06, 4.75,   4.8, 0.06, 4.75,
+    -4.8, 0.06, 2.18,   4.8, 0.06, 2.18,
+  ], 3));
+  rampGeometry.setIndex([
+    0, 1, 2, 1, 3, 2,       // superfície inclinada
+    4, 2, 5, 5, 2, 3,       // base inferior
+    0, 2, 4, 0, 4, 1,       // lateral esquerda / frente
+    1, 5, 3, 1, 4, 5,       // lateral direita
+    2, 3, 4, 3, 5, 4,       // borda externa
+  ]);
+  rampGeometry.computeVertexNormals();
+  const ramp = new THREE.Mesh(rampGeometry, dock);
+  ramp.receiveShadow = true; ramp.castShadow = true; g.add(ramp);
+
+  // Faixas laterais de aproximação e áreas livres junto aos portões.
+  for (const x of [-5.15, 5.15]) {
+    g.add(b(0.08, 0.025, 2.9, paint, x, 0.77, 0.55));
+  }
+
+  // Paletes ficam fora do corredor central de ré dos caminhões.
+  const spots: [number, number, boolean][] = [[-4.35, 0.15, true], [-4.35, 1.35, true], [4.35, 0.15, false], [4.35, 1.35, true]];
+  for (const [x, z, w] of spots) {
+    const p = buildPallet(w); p.scale.setScalar(0.82); p.position.set(x, 0.77, z); g.add(p);
+  }
 
   // caminhão removido daqui — agora é animado externamente (scene.ts)
 
