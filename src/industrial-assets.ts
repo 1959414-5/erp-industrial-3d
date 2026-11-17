@@ -47,38 +47,42 @@ function getSource(url: string) {
   return pending;
 }
 
-/** Restrict imported materials to graphite, neutral steel and industrial orange. */
+/** Compartilha materiais já adaptados à paleta para evitar cópias por instância GLB. */
+const paletteMaterialCache = new WeakMap<THREE.Material, THREE.Material>();
+
 function applyIndustrialPalette(root: THREE.Object3D) {
   const graphite = 0x303b49;
   const steel = 0x858e99;
   const light = 0xdfe3e8;
   const orange = 0xe96b2c;
 
+  const paletteMaterial = (source: THREE.Material) => {
+    const cached = paletteMaterialCache.get(source);
+    if (cached) return cached;
+
+    const material = source.clone();
+    const color = (material as THREE.MeshStandardMaterial).color;
+    if (color) {
+      const hsl = { h: 0, s: 0, l: 0 };
+      color.getHSL(hsl);
+      let target = steel;
+      if (hsl.s > 0.24 && hsl.h >= 0.035 && hsl.h <= 0.17) target = orange;
+      else if (hsl.s > 0.24) target = graphite;
+      else if (hsl.l > 0.78) target = light;
+      else if (hsl.l < 0.24) target = graphite;
+      color.setHex(target);
+    }
+    material.needsUpdate = true;
+    paletteMaterialCache.set(source, material);
+    return material;
+  };
+
   root.traverse((object) => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
-
     const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const materials = sourceMaterials.map((source) => {
-      const material = source.clone();
-      const color = (material as THREE.MeshStandardMaterial).color;
-      if (color) {
-        const hsl = { h: 0, s: 0, l: 0 };
-        color.getHSL(hsl);
-        let target = steel;
-        if (hsl.s > 0.24 && hsl.h >= 0.035 && hsl.h <= 0.17) target = orange;
-        else if (hsl.s > 0.24) target = graphite;
-        else if (hsl.l > 0.78) target = light;
-        else if (hsl.l < 0.24) target = graphite;
-        color.setHex(target);
-      }
-      material.needsUpdate = true;
-      return material;
-    });
-
+    const materials = sourceMaterials.map(paletteMaterial);
     mesh.material = Array.isArray(mesh.material) ? materials : materials[0];
-    // Os GLBs são os modelos mais densos da cena: evitamos o passe de sombras
-    // sobre cada superfície importada, mantendo o sombreamento global nos demais objetos.
     mesh.castShadow = true;
     mesh.receiveShadow = false;
   });
