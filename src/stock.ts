@@ -12,6 +12,7 @@ export class SheetLots {
   private pallets: THREE.InstancedMesh;
   private sheets: THREE.InstancedMesh;
   private straps: THREE.InstancedMesh;
+  private alertRings: THREE.InstancedMesh;
   private tops: number[] = new Array(COLS * ROWS).fill(BASE);
 
   constructor(private origin = new THREE.Vector3(23, 0, -12)) {
@@ -19,7 +20,14 @@ export class SheetLots {
     this.pallets = new THREE.InstancedMesh(new THREE.BoxGeometry(3.8, BASE, 2.4), new THREE.MeshStandardMaterial({ color: 0xc9a26b, roughness: 0.9 }), n);
     this.sheets = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, T, 2.1), new THREE.MeshStandardMaterial({ roughness: 0.28, metalness: 0.85 }), n * MAX);
     this.straps = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 1, 2.2), new THREE.MeshStandardMaterial({ color: 0x2b3550, roughness: 0.6 }), n * 2);
+    this.alertRings = new THREE.InstancedMesh(
+      new THREE.RingGeometry(1.25, 1.43, 28),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.76, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+      n
+    );
+    this.alertRings.renderOrder = 3;
     for (const m of [this.pallets, this.sheets, this.straps]) { m.castShadow = true; m.receiveShadow = true; this.group.add(m); }
+    this.group.add(this.alertRings);
     this.setOccupancy(new Array(n).fill(0.5));
   }
 
@@ -56,10 +64,18 @@ export class SheetLots {
         d.rotation.set(0, 0, 0); d.scale.set(1, layers ? h + 0.04 : 0.0001, 1);
         d.position.set(x + (s ? 1.1 : -1.1), BASE + h / 2, z); d.updateMatrix(); this.straps.setMatrixAt(i * 2 + s, d.matrix);
       }
+      const alertState = state === 'critical' || state === 'empty';
+      d.rotation.set(-Math.PI / 2, 0, 0);
+      d.position.set(x, 0.045, z);
+      d.scale.set(alertState ? 1 : 0.0001, alertState ? 1 : 0.0001, 1);
+      d.updateMatrix();
+      this.alertRings.setMatrixAt(i, d.matrix);
+      this.alertRings.setColorAt(i, c.setHex(state === 'critical' ? 0xe5484d : 0x8994a2));
     }
-    for (const m of [this.pallets, this.sheets, this.straps]) m.instanceMatrix.needsUpdate = true;
+    for (const m of [this.pallets, this.sheets, this.straps, this.alertRings]) m.instanceMatrix.needsUpdate = true;
     if (this.sheets.instanceColor) this.sheets.instanceColor.needsUpdate = true;
     if (this.pallets.instanceColor) this.pallets.instanceColor.needsUpdate = true;
+    if (this.alertRings.instanceColor) this.alertRings.instanceColor.needsUpdate = true;
   }
 
   center(i: number) { return new THREE.Vector3(this.origin.x + (i % COLS) * SPX, 0, this.origin.z + Math.floor(i / COLS) * SPZ); }
