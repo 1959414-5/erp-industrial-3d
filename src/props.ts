@@ -189,72 +189,86 @@ export function buildPallet(wrap = false): THREE.Group {
 
 /** Empilhadeira com mastro, garfos, rodas girando e motorista. Segue uma rota
  *  de vários pontos (polilinha), indo e voltando (ping-pong). */
-export function buildForklift(route: {
-  path: [number, number][];
-  speed?: number;
-  carry?: boolean;
-  elevation?: number[];
-  transfer?: boolean;
-  offset?: number;
-  modelScale?: number;
-}): Prop {
-  const g = new THREE.Group();
-  const vehicle = new THREE.Group();
-  const body = std(0xf2a71b, 0.5, 0.2), dark = std(0x24303f, 0.5), metal = std(0xcfd6e2, 0.3, 0.8), seat = std(0x1a2236, 0.7);
-  // chassi + contrapeso (frente dos garfos = +x)
-  vehicle.add(b(1.5, 0.55, 1.0, body, -0.1, 0.32, 0));
-  vehicle.add(b(0.5, 0.7, 1.0, body, -0.95, 0.32, 0)); // contrapeso traseiro
-  // rodas
-  const wheels: THREE.Mesh[] = [];
-  for (const [x, z] of [[0.5, 0.52], [0.5, -0.52], [-0.8, 0.52], [-0.8, -0.52]]) {
-    const w = cyl(0.26, 0.18, dark, x, 0.26, z, 16); w.rotation.x = Math.PI / 2; vehicle.add(w); wheels.push(w);
-  }
-  // gaiola de proteção (overhead guard)
-  for (const [x, z] of [[0.05, 0.42], [0.05, -0.42], [-0.6, 0.42], [-0.6, -0.42]]) vehicle.add(b(0.07, 1.25, 0.07, dark, x, 0.6, z));
-  vehicle.add(b(0.85, 0.07, 1.0, dark, -0.27, 1.85, 0));
-  // banco + motorista
-  vehicle.add(b(0.4, 0.1, 0.42, seat, -0.5, 0.87, 0), b(0.4, 0.4, 0.1, seat, -0.68, 0.95, 0));
-  const drv = buildWorker(7); drv.group.scale.setScalar(0.82); drv.group.position.set(-0.4, 0.52, 0); drv.group.rotation.y = Math.PI / 2; vehicle.add(drv.group);
-  // mastro + garfos (frente)
-  vehicle.add(b(0.1, 2.0, 0.12, metal, 0.72, 0.1, 0.28), b(0.1, 2.0, 0.12, metal, 0.72, 0.1, -0.28));
-  const carriage = new THREE.Group(); carriage.position.set(0.78, 0.12, 0);
-  carriage.add(b(0.08, 0.5, 0.7, dark, 0, 0.25, 0));
-  carriage.add(b(0.9, 0.08, 0.12, metal, 0.45, 0, 0.22), b(0.9, 0.08, 0.12, metal, 0.45, 0, -0.22)); // garfos
-  vehicle.add(carriage);
-  const carried = route.carry ? buildPallet(true) : null;
-  if (carried) {
-    carried.scale.setScalar(0.85);
-    carried.position.set(1.0, 0.16, 0);
-    vehicle.add(carried);
-  }
-  vehicle.scale.setScalar(route.modelScale ?? 1);
-  g.add(vehicle);
-  vehicle.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-
-  // --- percurso por polilinha (ping-pong) ---
-  const pts = route.path.map(([x, z]) => new THREE.Vector2(x, z));
-  const segLen: number[] = []; let total = 0;
-  for (let i = 0; i < pts.length - 1; i++) { const l = pts[i].distanceTo(pts[i + 1]); segLen.push(l); total += l; }
-  total = total || 1;
-  const speed = route.speed ?? 2;
-  const at = (s: number) => { // ponto e tangente a uma distância s ao longo da polilinha
-    s = Math.max(0, Math.min(total, s)); let acc = 0;
-    for (let i = 0; i < segLen.length; i++) {
-      if (s <= acc + segLen[i] || i === segLen.length - 1) {
-        const u = segLen[i] ? (s - acc) / segLen[i] : 0;
-        const p = pts[i].clone().lerp(pts[i + 1], u);
-        const tan = pts[i + 1].clone().sub(pts[i]).normalize();
-        return { p, tan, segment: i, u };
-      }
-      acc += segLen[i];
-    }
-    return { p: pts[0].clone(), tan: new THREE.Vector2(1, 0), segment: 0, u: 0 };
-  };
   let last = 0;
   return { group: g, update(t: number) {
     const dt = Math.min(Math.max(t - last, 0), 0.1); last = t;
-    const cycle = total / speed;                 // tempo de uma passada
-    const phase = (((t + (route.offset ?? 0)) / cycle) % 2 + 2) % 2; // 0..2
+    const travel = total / speed;
+
+    if (route.transfer) {
+      const pickupDuration = route.pickupDuration ?? 2.6;
+      const dropDuration = route.dropDuration ?? 1.8;
+      const cycle = travel * 2 + pickupDuration + dropDuration;
+      const elapsed = (((t + (route.offset ?? 0)) % cycle) + cycle) % cycle;
+      let distance = 0;
+      let direction = 1;
+      let mode: 'to-separation' | 'pickup' | 'return-loaded' | 'drop' = 'to-separation';
+      let phaseTime = 0;
+
+      if (elapsed < travel) {
+        mode = 'to-separation';
+        distance = (elapsed / travel) * total;
+        direction = 1;
+      } else if (elapsed < travel + pickupDuration) {
+        mode = 'pickup';
+        distance = total;
+        direction = 1;
+        phaseTime = elapsed - travel;
+      } else if (elapsed < travel * 2 + pickupDuration) {
+        mode = 'return-loaded';
+        phaseTime = elapsed - travel - pickupDuration;
+        distance = total * (1 - phaseTime / travel);
+        direction = -1;
+      } else {
+        mode = 'drop';
+        phaseTime = elapsed - travel * 2 - pickupDuration;
+        distance = 0;
+        direction = -1;
+      }
+
+      const { p, tan, segment, u } = at(distance);
+      const heights = route.elevation;
+      const baseY = heights && heights.length === pts.length
+        ? THREE.MathUtils.lerp(heights[segment], heights[segment + 1] ?? heights[segment], u)
+        : 0;
+      g.position.set(p.x, baseY, p.y);
+      const dir = tan.clone().multiplyScalar(direction);
+      g.rotation.y = Math.atan2(-dir.y, dir.x);
+
+      const pickupHalf = pickupDuration * 0.48;
+      const dropHalf = dropDuration * 0.55;
+      if (route.sourcePallet) {
+        route.sourcePallet.visible =
+          mode === 'to-separation' ||
+          (mode === 'pickup' && phaseTime < pickupHalf) ||
+          (mode === 'drop' && phaseTime >= dropHalf);
+      }
+      if (carried) {
+        carried.visible =
+          mode === 'return-loaded' ||
+          (mode === 'pickup' && phaseTime >= pickupHalf) ||
+          (mode === 'drop' && phaseTime < dropHalf);
+      }
+
+      const smooth = (value: number) => {
+        const v = THREE.MathUtils.clamp(value, 0, 1);
+        return v * v * (3 - 2 * v);
+      };
+      let lift = 0;
+      if (mode === 'pickup') lift = 0.22 * smooth(phaseTime / pickupDuration);
+      else if (mode === 'return-loaded') lift = 0.22;
+      else if (mode === 'drop') lift = 0.22 * (1 - smooth(phaseTime / dropDuration));
+      carriage.position.y = 0.12 + lift + Math.sin(t * 1.3) * 0.008;
+
+      const moving = mode === 'to-separation' || mode === 'return-loaded';
+      if (moving) {
+        const spin = (speed * dt) / 0.26;
+        wheels.forEach((wheel) => (wheel.rotation.y += spin * direction));
+      }
+      return;
+    }
+
+    // Comportamento original de ida e volta para empilhadeiras dos demais corredores.
+    const phase = (((t + (route.offset ?? 0)) / travel) % 2 + 2) % 2;
     const s = phase < 1 ? phase * total : (2 - phase) * total;
     const sgn = phase < 1 ? 1 : -1;
     const { p, tan, segment, u } = at(s);
@@ -266,15 +280,14 @@ export function buildForklift(route: {
     const dir = tan.clone().multiplyScalar(sgn);
     g.rotation.y = Math.atan2(-dir.y, dir.x);
     const spin = (speed * dt) / 0.26;
-    wheels.forEach((w) => (w.rotation.y += spin * sgn));
+    wheels.forEach((wheel) => (wheel.rotation.y += spin * sgn));
     const forwardProgress = phase < 1 ? phase : 2 - phase;
     const lowering = route.transfer && phase < 1
       ? THREE.MathUtils.smoothstep(forwardProgress, 0.88, 0.985)
       : 0;
     if (carried && route.transfer) carried.visible = phase < 1 && forwardProgress < 0.985;
-    carriage.position.y = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3)) - lowering * 0.075; // baixa a carga ao chegar ao staging
+    carriage.position.y = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3)) - lowering * 0.075;
   } };
-}
 
 /** Pilha de chapas metálicas sobre palete (matéria-prima junto da máquina). */
 export function buildSheetStack(n = 6): THREE.Group {
@@ -297,18 +310,17 @@ export function buildExpedition(): THREE.Group {
   const bayCenters = [-2.8, 2.8];
   g.add(
     b(1.1, 4.2, 0.3, wall, -4.95, 0, -2),
-    // Vão central dedicado à empilhadeira, independente dos dois portões de caminhão.
-    b(0.08, 3.45, 0.3, wall, -1.16, 0.12, -2),
-    b(0.08, 3.45, 0.3, wall, 1.16, 0.12, -2),
-    b(2.4, 0.75, 0.3, wall, 0, 3.825, -2),
+    // Abertura central contínua entre as docas: passagem livre para a empilhadeira,
+    // sem pilar ou viga no meio do vão.
     b(1.1, 4.2, 0.3, wall, 4.95, 0, -2),
   );
   for (const x of bayCenters) {
     // Verga superior e guias laterais do portão; a área inferior permanece completamente aberta.
     g.add(
       b(3.2, 0.85, 0.3, wall, x, 3.35, -2),
-      b(0.12, 3.35, 0.24, frame, x - 1.6, 0, -1.98),
-      b(0.12, 3.35, 0.24, frame, x + 1.6, 0, -1.98),
+      // Mantém somente o montante externo de cada portão. Os montantes internos
+      // saem para deixar o vão central limpo e sem uma "viga" no trajeto.
+      b(0.12, 3.35, 0.24, frame, x + (x < 0 ? -1.6 : 1.6), 0, -1.98),
     );
     // Conjunto de lâminas recolhidas junto à verga: indica portão aberto.
     for (let i = 0; i < 4; i++) {
@@ -319,30 +331,16 @@ export function buildExpedition(): THREE.Group {
       g.add(b(0.18, 0.72, 0.14, std(0x252e38, 0.86), x + side * 1.84, 0.12, -1.72));
     }
   }
-  // Guias e lâminas recolhidas no acesso central da empilhadeira.
-  g.add(
-    b(0.08, 3.35, 0.16, frame, -1.12, 0.12, -1.96),
-    b(0.08, 3.35, 0.16, frame, 1.12, 0.12, -1.96),
-    b(2.18, 0.07, 0.16, frame, 0, 3.38, -1.96),
-  );
-  for (let i = 0; i < 4; i++) {
-    g.add(b(2.08, 0.035, 0.035, door, 0, 3.0 + i * 0.07, -1.82));
-  }
-  const forkliftAccessSign = signBoard('ACESSO EMPILHADEIRA');
-  forkliftAccessSign.scale.set(0.72, 0.72, 1);
-  forkliftAccessSign.position.set(0, 2.72, -1.72);
-  g.add(forkliftAccessSign);
-
   // Placa superior central da expedição.
   const sign = signBoard('EXPEDIÇÃO'); sign.position.set(0, 3.72, -1.7); g.add(sign);
 
-  // Rampa interna do acesso central: nível da doca (y=0.375) até o piso do depósito (y=0.06).
+  // Rampa interna longa e suave: desce do piso da doca até o piso do depósito.
   const innerRampGeometry = new THREE.BufferGeometry();
   innerRampGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
-    -1.08, 0.375, -2.12,   1.08, 0.375, -2.12,
-    -1.08, 0.06, -4.28,    1.08, 0.06, -4.28,
-    -1.08, 0.06, -2.12,   1.08, 0.06, -2.12,
-    -1.08, 0.06, -4.28,   1.08, 0.06, -4.28,
+    -1.02, 0.375, -2.12,   1.02, 0.375, -2.12,
+    -1.02, 0.06, -5.18,    1.02, 0.06, -5.18,
+    -1.02, 0.06, -2.12,    1.02, 0.06, -2.12,
+    -1.02, 0.06, -5.18,    1.02, 0.06, -5.18,
   ], 3));
   innerRampGeometry.setIndex([
     0, 1, 2, 1, 3, 2,
@@ -356,10 +354,10 @@ export function buildExpedition(): THREE.Group {
   const innerRamp = new THREE.Mesh(innerRampGeometry, dock);
   innerRamp.receiveShadow = true; innerRamp.castShadow = true; g.add(innerRamp);
   // Guias laterais baixas com faixa amarela de segurança.
-  for (const x of [-1.08, 1.08]) {
+  for (const x of [-1.02, 1.02]) {
     g.add(
-      b(0.08, 0.16, 2.12, frame, x, 0.19, -3.2),
-      b(0.09, 0.025, 2.12, paint, x, 0.285, -3.2),
+      b(0.06, 0.12, 3.06, frame, x, 0.12, -3.65),
+      b(0.07, 0.018, 3.06, paint, x, 0.22, -3.65),
     );
   }
 
@@ -401,9 +399,9 @@ export function buildExpedition(): THREE.Group {
     const p = buildPallet(w); p.scale.setScalar(0.82); p.position.set(x, 0.77, z); g.add(p);
   }
 
-  // DEPÓSITO DE EXPEDIÇÃO — compacto para preservar integralmente a faixa verde de pedestres.
-  // Parede dos portões em z=-2; a nova parede de fundo termina em z=-9.35,
-  // equivalente ao eixo global z=15.15, deixando 0.65 m livres antes da faixa verde (z<=14.5).
+  // DEPÓSITO DE EXPEDIÇÃO — totalmente atrás dos portões e fora da faixa verde.
+  // A parede de fundo termina em z=-9.35 (global z=15.15); a passagem de pedestres
+  // permanece livre até z=14.5. Paredes baixas favorecem a leitura da operação em 3D.
   const depotFloor = std(0xcbd2d9, 0.92);
   const depotWall = std(0xe8edf1, 0.82);
   const depotFrame = std(0x465668, 0.5, 0.28);
@@ -417,18 +415,18 @@ export function buildExpedition(): THREE.Group {
 
   // Paredes laterais e fundo dentro do limite da área industrial, sem avançar sobre pedestres.
   g.add(
-    b(0.18, 4.25, 7.35, depotWall, -7.1, 0.12, -5.675),
-    b(0.18, 4.25, 7.35, depotWall, 7.1, 0.12, -5.675),
-    b(14.2, 4.25, 0.18, depotWall, 0, 0.12, -9.35),
+    b(0.18, 1.25, 7.35, depotWall, -7.1, 0.12, -5.675),
+    b(0.18, 1.25, 7.35, depotWall, 7.1, 0.12, -5.675),
+    b(14.2, 1.25, 0.18, depotWall, 0, 0.12, -9.35),
   );
 
-  // Estrutura superior aberta para manter a visualização interna em 3D.
-  for (const x of [-7.0, -3.55, 0, 3.55, 7.0]) {
-    g.add(b(0.18, 4.25, 0.18, depotFrame, x, 0.12, -9.21));
-    g.add(b(0.16, 4.05, 0.16, depotFrame, x, 0.12, -2.42));
+  // Somente quatro pilares de canto. Sem colunas no meio do galpão e sem vigas superiores.
+  for (const x of [-7.0, 7.0]) {
+    g.add(
+      b(0.18, 3.65, 0.18, depotFrame, x, 0.12, -9.21),
+      b(0.16, 3.65, 0.16, depotFrame, x, 0.12, -2.42),
+    );
   }
-  // Cobertura aberta: sem vigas superiores cruzando o campo de visão da câmera.
-  // As colunas laterais permanecem para marcar o limite físico do depósito.
 
   // Guias internas curtas; terminam antes da área de staging e não cruzam o corredor central.
   const lanePaint = std(0xe5c24a, 0.72);
@@ -469,6 +467,7 @@ export function buildExpedition(): THREE.Group {
   ];
   for (const [x, z, wrapped] of stagingPositions) {
     const pallet = buildPallet(wrapped);
+    pallet.name = x === 0 ? 'dispatch-separation-pick-pallet' : 'dispatch-separation-pallet';
     pallet.scale.set(0.82, 0.84, 0.82);
     pallet.position.set(x, 0.08, z);
     g.add(pallet);
@@ -482,9 +481,13 @@ export function buildExpedition(): THREE.Group {
     b(0.46, 0.06, 0.34, depotBoxB, 0.38, 1.0, -8.62),
   );
   const depotSign = signBoard('DEPÓSITO DE EXPEDIÇÃO');
-  depotSign.scale.set(1.12, 0.95, 1);
-  depotSign.position.set(0, 3.42, -9.22);
+  depotSign.scale.set(1.05, 0.82, 1);
+  depotSign.position.set(0, 1.58, -9.22);
   g.add(depotSign);
+  const separationSign = signBoard('SEPARAÇÃO');
+  separationSign.scale.set(0.72, 0.72, 1);
+  separationSign.position.set(0, 1.52, -7.05);
+  g.add(separationSign);
   // caminhão removido daqui — agora é animado externamente (scene.ts)
 
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });

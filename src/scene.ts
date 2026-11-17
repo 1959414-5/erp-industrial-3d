@@ -259,13 +259,19 @@ export class Factory {
 
     // Empilhadeira de expedição: acesso central independente dos caminhões.
     // Transporta um palete pela rampa interna, deposita na área de staging e retorna vazia.
+    const separationPickPallet = exp.getObjectByName('dispatch-separation-pick-pallet');
     const dispatchForklift = buildForklift({
-      path: [[-36.5, 26.55], [-36.5, 22.55], [-36.5, 20.22], [-36.5, 17.5]],
+      // Sai do piso da doca, cruza o vão central livre, desce a rampa interna
+      // e para diante do palete central da área SEPARAÇÃO.
+      path: [[-36.5, 26.15], [-36.5, 22.38], [-36.5, 19.35], [-36.5, 17.75]],
       elevation: [0.375, 0.375, 0.06, 0.06],
-      speed: 1.25,
+      speed: 1.45,
       carry: true,
       transfer: true,
-      offset: 8,
+      sourcePallet: separationPickPallet,
+      pickupDuration: 2.8,
+      dropDuration: 2.0,
+      offset: 4,
       modelScale: 0.82,
     });
     this.props.push(dispatchForklift);

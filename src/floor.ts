@@ -103,10 +103,13 @@ export function buildFloor(): THREE.Mesh {
   hazard(-48, 15, -25, 34);          // expedição
 
   // faixa verde de pedestre (lateral esquerda)
-  g.fillStyle = 'rgba(34,181,115,.32)'; g.fillRect(X(-51), Z(-34), S(3), Z(10) - Z(-34));
+  // Continuidade da faixa verde lateral até a entrada da Expedição (limite z=14.5).
+  const pedestrianLaneEnd = 14.5;
+  g.fillStyle = 'rgba(34,181,115,.32)';
+  g.fillRect(X(-51), Z(-34), S(3), Z(pedestrianLaneEnd) - Z(-34));
   g.strokeStyle = '#fff'; g.lineWidth = 8; g.setLineDash([26, 20]);
-  g.beginPath(); g.moveTo(X(-49.5), Z(-34)); g.lineTo(X(-49.5), Z(10)); g.stroke();
-  g.beginPath(); g.moveTo(X(-48.5), Z(-34)); g.lineTo(X(-48.5), Z(10)); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.moveTo(X(-49.5), Z(-34)); g.lineTo(X(-49.5), Z(pedestrianLaneEnd)); g.stroke();
+  g.beginPath(); g.moveTo(X(-48.5), Z(-34)); g.lineTo(X(-48.5), Z(pedestrianLaneEnd)); g.stroke(); g.setLineDash([]);
   // ícone pedestre
   g.fillStyle = 'rgba(34,181,115,.6)'; g.font = 'bold 100px Inter, Arial';
   g.textAlign = 'center'; g.fillText('🚶', X(-49.5), Z(-10));
