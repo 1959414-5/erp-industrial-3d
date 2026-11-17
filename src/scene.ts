@@ -796,7 +796,7 @@ export class Factory {
     const side: -1 | 1 = dockPosition.x < -36.5 ? -1 : 1;
     const crew = buildDockCrew(Math.round(Math.abs(dockPosition.x) * 2), side);
     crew.group.position.set(dockPosition.x + side * 1.68, 0, 20.15);
-    crew.group.rotation.y = side < 0 ? 0 : Math.PI;
+    crew.group.rotation.y = 0;
     this.scene.add(crew.group);
 
     const rearDoors = truck.getObjectByName('truck-rear-doors');

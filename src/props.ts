@@ -163,7 +163,7 @@ export function buildDockCrew(seed = 0, side: -1 | 1 = 1): DockCrew {
         parcel.visible = true;
         const eased = p * p * (3 - 2 * p);
         const from = new THREE.Vector3(side * 0.98, 0.78 + index * 0.04, -0.58);
-        const to = new THREE.Vector3(-side * 1.32, 0.84, 1.85);
+        const to = new THREE.Vector3(-side * 1.32, 0.84, 2.42);
         parcel.position.lerpVectors(from, to, eased);
         parcel.rotation.y = side * -0.05;
       });
