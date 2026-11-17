@@ -480,6 +480,10 @@ export class Factory {
     const kept = this.editables.filter((e) => !/^(machine|stack|marker)-/.test(e.id));
     this.editables.splice(0, this.editables.length, ...kept);
     const seen = new Set<MachineType>();
+    const avgOee = ms.length ? ms.reduce((sum, machine) => sum + machine.oee, 0) / ms.length : 0;
+    const scrapValues = ms.map((machine) => machine.scrapPct ?? 0);
+    const avgScrap = scrapValues.length ? scrapValues.reduce((sum, value) => sum + value, 0) / scrapValues.length : 0;
+    const highScrapLimit = Math.max(avgScrap * 1.35, 3.5);
     const fallback: MachineType[] = ['laser', 'laser', 'laser', 'pressBrake', 'pressBrake', 'cnc', 'cnc', 'cnc', 'robotWelder', 'robotWelder', 'robotWelder', 'paintBooth', 'paintBooth', 'punchPress', 'bandSaw'];
     // Posições extraídas do layout de referência
     const BACK_Z = -11.5, FRONT_Z = 2.5;
@@ -510,9 +514,17 @@ export class Factory {
       const stack = buildSheetStack(5); stack.scale.setScalar(0.65); stack.position.set(mx, 0, stackZ);
       this.scene.add(stack); this.machineProps.push(stack);
       this.addEditable(`stack-${i}`, stack);
-      // pino flutuante com status (cor) e rótulo no 1º de cada tipo
-      const color = m.status === 'run' ? 0x22b573 : m.status === 'down' ? 0xe5484d : 0xf5b83d;
-      const label = seen.has(ty) ? null : TYPE_LABEL[ty]; seen.add(ty);
+      // Marcadores passam a sinalizar falha e indicadores fora do padrão da fábrica.
+      const lowOee = m.status !== 'down' && m.oee < avgOee - 10;
+      const highScrap = m.status !== 'down' && (m.scrapPct ?? 0) > highScrapLimit;
+      const flagged = lowOee || highScrap;
+      const color = m.status === 'down' ? 0xe5484d
+        : flagged || m.status === 'idle' ? 0xf5b83d : 0x22b573;
+      const label = m.status === 'down' ? `FALHA · ${m.name}`
+        : highScrap ? `REFUGO ALTO · ${m.name}`
+          : lowOee ? `OEE ABAIXO DA MÉDIA · ${m.name}`
+            : seen.has(ty) ? null : TYPE_LABEL[ty];
+      seen.add(ty);
       const mk = buildMarker(label, color); mk.group.position.set(mx, 4.2, mz);
       this.scene.add(mk.group); this.markers.push(mk);
       this.addEditable(`marker-${i}`, mk.group);
