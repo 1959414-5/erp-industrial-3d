@@ -157,13 +157,24 @@ export function buildFloor(): THREE.Mesh {
   g.beginPath(); g.moveTo(X(-45), Z(14.5)); g.lineTo(X(5), Z(14.5)); g.stroke(); g.setLineDash([]);
 
   // ── RÓTULOS DOS SETORES ───────────────────────────────────────
-  g.fillStyle = 'rgba(31,42,68,.28)'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = '900 180px Inter, Arial'; g.fillText('PRODUÇÃO', X(-13), Z(5.5));
-  g.font = '900 170px Inter, Arial'; g.fillText('ESTOQUE', X(35), Z(-5));
-  g.font = '900 130px Inter, Arial'; g.fillText('EXPEDIÇÃO', X(-36.5), Z(25));
-  g.font = '900 140px Inter, Arial'; g.fillText('COMERCIAL', X(27), Z(13));
+  const floorLabel = (title: string, subtitle: string, x: number, z: number, titleSize: number, subSize: number) => {
+    g.save();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `900 ${titleSize}px Inter, Arial`;
+    g.fillStyle = 'rgba(31,42,68,0.24)';
+    g.fillText(title, X(x), Z(z));
+    g.font = `700 ${subSize}px Inter, Arial`;
+    g.fillStyle = 'rgba(31,42,68,0.34)';
+    g.fillText(subtitle, X(x), Z(z + 2.0));
+    g.restore();
+  };
+  floorLabel('PRODUÇÃO', 'CORTE  ·  CONFORMAÇÃO  ·  USINAGEM', -13, 5.5, 180, 42);
+  floorLabel('ESTOQUE', 'MATÉRIA-PRIMA  ·  CHAPAS', 35, -5, 170, 40);
+  floorLabel('EXPEDIÇÃO', 'RECEBIMENTO  ·  CARREGAMENTO', -36.5, 25, 130, 34);
+  floorLabel('COMERCIAL', 'ATENDIMENTO  ·  VENDAS', 27, 13, 140, 38);
   // rótulo do estacionamento (topo do asfalto, abaixo do P)
   g.fillStyle = 'rgba(255,255,255,.22)'; g.font = '900 90px Inter, Arial';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('ESTACIONAMENTO', X(-12), Z(34));
 
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
