@@ -138,10 +138,20 @@
 
     <aside class="app-inspector" aria-label="Painel de dados e indicadores">
       <div class="inspector-head">
-        <div><span class="workspace-eyebrow">CENTRO DE CONTROLE</span><h2>Painel de dados</h2></div>
-        <span class="inspector-live"><i></i> LIVE</span>
+        <div class="inspector-title">
+          <span class="workspace-eyebrow">GESTÃO DA OPERAÇÃO</span>
+          <h2>Centro de Controle</h2>
+          <small>Monitoramento da planta industrial</small>
+        </div>
+        <span class="inspector-live"><i></i> ONLINE</span>
       </div>
-      <label class="inspector-search">
+      <div id="status-summary" class="status-summary" aria-label="Resumo de status das máquinas"></div>
+      <nav id="control-tabs" class="control-tabs" aria-label="Seções do Centro de Controle">
+        <button type="button" data-control-view="indicators" class="on" aria-pressed="true">Indicadores</button>
+        <button type="button" data-control-view="assets" aria-pressed="false"><span id="assets-tab-label">Máquinas</span></button>
+        <button type="button" data-control-view="alerts" aria-pressed="false">Alertas <b id="control-alert-count">0</b></button>
+      </nav>
+      <label id="inspector-search-wrap" class="inspector-search" hidden>
         <span>⌕</span>
         <input id="inspector-search" type="search" autocomplete="off" placeholder="Pesquisar neste módulo..." aria-label="Pesquisar neste módulo"/>
         <kbd>/</kbd>
@@ -150,6 +160,7 @@
         <section id="left" class="glass"></section>
         <section id="right" class="glass"></section>
         <section id="bottom" class="glass"></section>
+        <section id="alert-center" class="glass" aria-label="Alertas operacionais"></section>
       </div>
       <div class="inspector-foot"><span>ERP INDUSTRIAL ANALYTICS</span><span>DATA PANEL</span></div>
     </aside>

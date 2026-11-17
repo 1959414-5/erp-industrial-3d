@@ -7,7 +7,7 @@ const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[ch] ?? ch));
 
-const M_STATUS = { run: ['Operando', '#394454'], idle: ['Parada', '#98a1ad'], down: ['Com falha', '#f26a1b'] } as const;
+const M_STATUS = { run: ['Operando', '#22b573'], idle: ['Parada', '#f5b83d'], down: ['Com falha', '#e5484d'] } as const;
 const S_STATUS = { online: ['Disponível', '#394454'], busy: ['Em atendimento', '#f26a1b'], away: ['Ausente', '#98a1ad'] } as const;
 const TYPE_LABEL = { laser: 'Corte a laser', plasma: 'Corte a plasma', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC', robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita' } as const;
 type LotState = 'empty' | 'critical' | 'full' | 'medium' | 'low';
@@ -34,7 +34,10 @@ function lotDetailName(data: Dataset, index: number): string {
 
 export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s: Selection | null) => void) {
   const tabs = $('tabs'), left = $('left'), right = $('right'), bottom = $('bottom'), tip = $('tip'), card = $('card');
+  const controlTabs = $('control-tabs'), alertCenter = $('alert-center'), statusSummary = $('status-summary');
+  const searchWrap = $('inspector-search-wrap'), assetsTabLabel = $('assets-tab-label'), alertCount = $('control-alert-count');
   let currentTab: TabKey = 'producao';
+  let controlView: 'indicators' | 'assets' | 'alerts' = 'indicators';
   let lotFilter: 'all' | 'critical' | 'low' | 'empty' = 'all';
   let machineFilter: 'all' | 'run' | 'idle' | 'down' = 'all';
   let selected: Selection | null = null;
@@ -55,6 +58,86 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     const lot = data.lots[index];
     return lotState(data.occupancy[index] ?? 0, lot?.qty ?? 0, lot?.minQty ?? 0);
   };
+
+  function renderStatusSummary() {
+    const counts = {
+      run: data.machines.filter((machine) => machine.status === 'run').length,
+      idle: data.machines.filter((machine) => machine.status === 'idle').length,
+      down: data.machines.filter((machine) => machine.status === 'down').length,
+    };
+    statusSummary.innerHTML = [
+      ['run', 'Operando', counts.run],
+      ['idle', 'Paradas', counts.idle],
+      ['down', 'Falhas', counts.down],
+    ].map(([key, label, count]) => `<div class="status-tile status-${key}">
+      <span class="status-indicator"></span><div><b>${count}</b><small>${label}</small></div>
+    </div>`).join('');
+  }
+
+  function renderAlerts() {
+    const avgOee = data.machines.length
+      ? data.machines.reduce((sum, machine) => sum + machine.oee, 0) / data.machines.length : 0;
+    const scrapValues = data.machines.map((machine) => machine.scrapPct ?? 0);
+    const avgScrap = scrapValues.length
+      ? scrapValues.reduce((sum, value) => sum + value, 0) / scrapValues.length : 0;
+    const highScrapLimit = Math.max(avgScrap * 1.35, 3.5);
+    const items: { kind: Selection['kind']; index: number; level: 'critical' | 'warn'; title: string; detail: string; tag: string }[] = [];
+
+    data.machines.forEach((machine, index) => {
+      if (machine.status === 'down') {
+        items.push({ kind: 'machine', index, level: 'critical', title: machine.name,
+          detail: `Equipamento com falha · OEE ${num(machine.oee)}%`, tag: 'FALHA' });
+        return;
+      }
+      if (machine.status === 'idle') {
+        items.push({ kind: 'machine', index, level: 'warn', title: machine.name,
+          detail: `Equipamento parado · OEE ${num(machine.oee)}%`, tag: 'PARADA' });
+        return;
+      }
+      if ((machine.scrapPct ?? 0) > highScrapLimit) {
+        items.push({ kind: 'machine', index, level: 'warn', title: machine.name,
+          detail: `Refugo acima do limite de referência · ${num(machine.scrapPct ?? 0, 1)}%`, tag: 'REFUGO' });
+      } else if (machine.oee < avgOee - 10) {
+        items.push({ kind: 'machine', index, level: 'warn', title: machine.name,
+          detail: `OEE abaixo da média da fábrica · ${num(machine.oee)}%`, tag: 'OEE' });
+      }
+    });
+
+    data.lots.forEach((lot, index) => {
+      const state = statusForLot(index);
+      if (state === 'critical') {
+        items.push({ kind: 'lot', index, level: 'critical', title: `Lote ${lot.id}`,
+          detail: `${lot.material} · ${num(lot.qty)} un. (mínimo: ${num(lot.minQty)})`, tag: 'ESTOQUE CRÍTICO' });
+      }
+    });
+
+    items.sort((a, b) => (a.level === 'critical' ? 0 : 1) - (b.level === 'critical' ? 0 : 1));
+    alertCount.textContent = String(items.length);
+    alertCount.classList.toggle('has-alerts', items.length > 0);
+    alertCenter.innerHTML = `<div class="alert-center-heading">
+      <div><span class="panel-overline">ACOMPANHAMENTO OPERACIONAL</span><h3>Ocorrências identificadas</h3></div>
+      <span class="alert-total ${items.length ? 'has-alerts' : 'clear'}">${items.length} ${items.length === 1 ? 'ocorrência' : 'ocorrências'}</span>
+    </div>` + (items.length
+      ? `<div class="alert-list">${items.map((item) => `<button type="button" class="alert-row alert-${item.level}" data-k="${item.kind}" data-i="${item.index}">
+          <span class="alert-mark">${item.level === 'critical' ? '!' : '△'}</span>
+          <span class="alert-copy"><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.detail)}</small></span>
+          <span class="alert-tag">${item.tag}</span><span class="alert-arrow">›</span>
+        </button>`).join('')}</div><p class="alert-footnote">Selecione uma ocorrência para localizar o ativo no ambiente 3D.</p>`
+      : `<div class="alert-empty"><span>✓</span><b>Nenhuma ocorrência crítica identificada</b><small>Os indicadores atuais não apresentam falhas ou níveis críticos de estoque.</small></div>`);
+  }
+
+  function setControlView(view: 'indicators' | 'assets' | 'alerts') {
+    controlView = view;
+    const inspector = document.querySelector<HTMLElement>('.app-inspector');
+    inspector?.classList.remove('view-indicators', 'view-assets', 'view-alerts');
+    inspector?.classList.add(`view-${view}`);
+    controlTabs.querySelectorAll<HTMLButtonElement>('[data-control-view]').forEach((button) => {
+      const active = button.dataset.controlView === view;
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    searchWrap.hidden = view !== 'assets';
+  }
 
   function bottomFor(k: TabKey) {
     if (k === 'producao') {
@@ -150,6 +233,26 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     onSelect({ kind, index } as Selection);
   };
 
+  controlTabs.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-control-view]');
+    const view = button?.dataset.controlView;
+    if (view === 'indicators' || view === 'assets' || view === 'alerts') setControlView(view);
+  });
+  alertCenter.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-k][data-i]');
+    if (!button) return;
+    const kind = button.dataset.k as Selection['kind'];
+    const index = Number(button.dataset.i);
+    if (!Number.isInteger(index) || index < 0) return;
+    const tab = kind === 'machine' ? 'producao' : kind === 'lot' ? 'estoque' : 'comercial';
+    if (currentTab !== tab) select(tab);
+    setControlView('alerts');
+    onSelect({ kind, index });
+  });
+  renderStatusSummary();
+  renderAlerts();
+  setControlView('indicators');
+
   function kpiGlyph(label: string): string {
     const value = label.toLowerCase();
     if (value.includes('valor') || value.includes('faturamento') || value.includes('ticket')) return 'R$';
@@ -162,6 +265,8 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
 
   function select(k: TabKey) {
     currentTab = k;
+    setControlView('indicators');
+    assetsTabLabel.textContent = k === 'producao' ? 'Máquinas' : k === 'estoque' ? 'Lotes' : 'Equipe';
     if (k !== 'estoque') lotFilter = 'all';
     if (k !== 'producao') machineFilter = 'all';
     tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.k === k));
