@@ -187,107 +187,211 @@ export function buildPallet(wrap = false): THREE.Group {
   return g;
 }
 
-/** Empilhadeira com mastro, garfos, rodas girando e motorista. Segue uma rota
- *  de vários pontos (polilinha), indo e voltando (ping-pong). */
-  let last = 0;
-  return { group: g, update(t: number) {
-    const dt = Math.min(Math.max(t - last, 0), 0.1); last = t;
-    const travel = total / speed;
+/** Empilhadeira com mastro, garfos, rodas girando e motorista.
+ *  No modo transfer, busca uma carga na separação e volta à doca para descarregar. */
+export function buildForklift(route: {
+  path: [number, number][];
+  speed?: number;
+  carry?: boolean;
+  elevation?: number[];
+  transfer?: boolean;
+  offset?: number;
+  modelScale?: number;
+  sourcePallet?: THREE.Object3D;
+  pickupDuration?: number;
+  dropDuration?: number;
+}): Prop {
+  const g = new THREE.Group();
+  const vehicle = new THREE.Group();
+  const body = std(0xf2a71b, 0.5, 0.2);
+  const dark = std(0x24303f, 0.5);
+  const metal = std(0xcfd6e2, 0.3, 0.8);
+  const seat = std(0x1a2236, 0.7);
 
-    if (route.transfer) {
-      const pickupDuration = route.pickupDuration ?? 2.6;
-      const dropDuration = route.dropDuration ?? 1.8;
-      const cycle = travel * 2 + pickupDuration + dropDuration;
-      const elapsed = (((t + (route.offset ?? 0)) % cycle) + cycle) % cycle;
-      let distance = 0;
-      let direction = 1;
-      let mode: 'to-separation' | 'pickup' | 'return-loaded' | 'drop' = 'to-separation';
-      let phaseTime = 0;
+  // Chassi e contrapeso. A frente dos garfos corresponde ao eixo local +X.
+  vehicle.add(b(1.5, 0.55, 1.0, body, -0.1, 0.32, 0));
+  vehicle.add(b(0.5, 0.7, 1.0, body, -0.95, 0.32, 0));
 
-      if (elapsed < travel) {
-        mode = 'to-separation';
-        distance = (elapsed / travel) * total;
-        direction = 1;
-      } else if (elapsed < travel + pickupDuration) {
-        mode = 'pickup';
-        distance = total;
-        direction = 1;
-        phaseTime = elapsed - travel;
-      } else if (elapsed < travel * 2 + pickupDuration) {
-        mode = 'return-loaded';
-        phaseTime = elapsed - travel - pickupDuration;
-        distance = total * (1 - phaseTime / travel);
-        direction = -1;
-      } else {
-        mode = 'drop';
-        phaseTime = elapsed - travel * 2 - pickupDuration;
-        distance = 0;
-        direction = -1;
+  const wheels: THREE.Mesh[] = [];
+  for (const [x, z] of [[0.5, 0.52], [0.5, -0.52], [-0.8, 0.52], [-0.8, -0.52]]) {
+    const wheel = cyl(0.26, 0.18, dark, x, 0.26, z, 16);
+    wheel.rotation.x = Math.PI / 2;
+    vehicle.add(wheel);
+    wheels.push(wheel);
+  }
+
+  // Gaiola de proteção, banco e operador.
+  for (const [x, z] of [[0.05, 0.42], [0.05, -0.42], [-0.6, 0.42], [-0.6, -0.42]]) {
+    vehicle.add(b(0.07, 1.25, 0.07, dark, x, 0.6, z));
+  }
+  vehicle.add(b(0.85, 0.07, 1.0, dark, -0.27, 1.85, 0));
+  vehicle.add(
+    b(0.4, 0.1, 0.42, seat, -0.5, 0.87, 0),
+    b(0.4, 0.4, 0.1, seat, -0.68, 0.95, 0),
+  );
+  const driver = buildWorker(7);
+  driver.group.scale.setScalar(0.82);
+  driver.group.position.set(-0.4, 0.52, 0);
+  driver.group.rotation.y = Math.PI / 2;
+  vehicle.add(driver.group);
+
+  // Mastro, carro porta-garfos e carga.
+  vehicle.add(
+    b(0.1, 2.0, 0.12, metal, 0.72, 0.1, 0.28),
+    b(0.1, 2.0, 0.12, metal, 0.72, 0.1, -0.28),
+  );
+  const carriage = new THREE.Group();
+  carriage.position.set(0.78, 0.12, 0);
+  carriage.add(b(0.08, 0.5, 0.7, dark, 0, 0.25, 0));
+  carriage.add(
+    b(0.9, 0.08, 0.12, metal, 0.45, 0, 0.22),
+    b(0.9, 0.08, 0.12, metal, 0.45, 0, -0.22),
+  );
+  vehicle.add(carriage);
+
+  const carried = route.carry ? buildPallet(true) : null;
+  if (carried) {
+    carried.scale.setScalar(0.85);
+    carried.position.set(1.0, 0.16, 0);
+    carried.visible = !route.transfer;
+    vehicle.add(carried);
+  }
+  vehicle.scale.setScalar(route.modelScale ?? 1);
+  g.add(vehicle);
+  vehicle.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (mesh.isMesh) { mesh.castShadow = true; mesh.receiveShadow = true; }
+  });
+
+  // Percurso por polilinha e perfil vertical para a rampa.
+  const points = route.path.map(([x, z]) => new THREE.Vector2(x, z));
+  const segmentLengths: number[] = [];
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const length = points[i].distanceTo(points[i + 1]);
+    segmentLengths.push(length);
+    total += length;
+  }
+  total = total || 1;
+  const speed = route.speed ?? 2;
+
+  const at = (distance: number) => {
+    const s = Math.max(0, Math.min(total, distance));
+    let accumulated = 0;
+    for (let i = 0; i < segmentLengths.length; i++) {
+      if (s <= accumulated + segmentLengths[i] || i === segmentLengths.length - 1) {
+        const u = segmentLengths[i] ? (s - accumulated) / segmentLengths[i] : 0;
+        const p = points[i].clone().lerp(points[i + 1], u);
+        const tangent = points[i + 1].clone().sub(points[i]).normalize();
+        return { p, tangent, segment: i, u };
       }
-
-      const { p, tan, segment, u } = at(distance);
-      const heights = route.elevation;
-      const baseY = heights && heights.length === pts.length
-        ? THREE.MathUtils.lerp(heights[segment], heights[segment + 1] ?? heights[segment], u)
-        : 0;
-      g.position.set(p.x, baseY, p.y);
-      const dir = tan.clone().multiplyScalar(direction);
-      g.rotation.y = Math.atan2(-dir.y, dir.x);
-
-      const pickupHalf = pickupDuration * 0.48;
-      const dropHalf = dropDuration * 0.55;
-      if (route.sourcePallet) {
-        route.sourcePallet.visible =
-          mode === 'to-separation' ||
-          (mode === 'pickup' && phaseTime < pickupHalf) ||
-          (mode === 'drop' && phaseTime >= dropHalf);
-      }
-      if (carried) {
-        carried.visible =
-          mode === 'return-loaded' ||
-          (mode === 'pickup' && phaseTime >= pickupHalf) ||
-          (mode === 'drop' && phaseTime < dropHalf);
-      }
-
-      const smooth = (value: number) => {
-        const v = THREE.MathUtils.clamp(value, 0, 1);
-        return v * v * (3 - 2 * v);
-      };
-      let lift = 0;
-      if (mode === 'pickup') lift = 0.22 * smooth(phaseTime / pickupDuration);
-      else if (mode === 'return-loaded') lift = 0.22;
-      else if (mode === 'drop') lift = 0.22 * (1 - smooth(phaseTime / dropDuration));
-      carriage.position.y = 0.12 + lift + Math.sin(t * 1.3) * 0.008;
-
-      const moving = mode === 'to-separation' || mode === 'return-loaded';
-      if (moving) {
-        const spin = (speed * dt) / 0.26;
-        wheels.forEach((wheel) => (wheel.rotation.y += spin * direction));
-      }
-      return;
+      accumulated += segmentLengths[i];
     }
+    return { p: points[0].clone(), tangent: new THREE.Vector2(1, 0), segment: 0, u: 0 };
+  };
 
-    // Comportamento original de ida e volta para empilhadeiras dos demais corredores.
-    const phase = (((t + (route.offset ?? 0)) / travel) % 2 + 2) % 2;
-    const s = phase < 1 ? phase * total : (2 - phase) * total;
-    const sgn = phase < 1 ? 1 : -1;
-    const { p, tan, segment, u } = at(s);
-    const heights = route.elevation;
-    const baseY = heights && heights.length === pts.length
-      ? THREE.MathUtils.lerp(heights[segment], heights[segment + 1] ?? heights[segment], u)
-      : 0;
-    g.position.set(p.x, baseY, p.y);
-    const dir = tan.clone().multiplyScalar(sgn);
-    g.rotation.y = Math.atan2(-dir.y, dir.x);
-    const spin = (speed * dt) / 0.26;
-    wheels.forEach((wheel) => (wheel.rotation.y += spin * sgn));
-    const forwardProgress = phase < 1 ? phase : 2 - phase;
-    const lowering = route.transfer && phase < 1
-      ? THREE.MathUtils.smoothstep(forwardProgress, 0.88, 0.985)
-      : 0;
-    if (carried && route.transfer) carried.visible = phase < 1 && forwardProgress < 0.985;
-    carriage.position.y = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3)) - lowering * 0.075;
-  } };
+  let last = 0;
+  return {
+    group: g,
+    update(t: number) {
+      const dt = Math.min(Math.max(t - last, 0), 0.1);
+      last = t;
+      const travel = total / speed;
+
+      if (route.transfer) {
+        const pickupDuration = route.pickupDuration ?? 2.8;
+        const dropDuration = route.dropDuration ?? 2.0;
+        const cycle = travel * 2 + pickupDuration + dropDuration;
+        const elapsed = (((t + (route.offset ?? 0)) % cycle) + cycle) % cycle;
+
+        let distance = 0;
+        let direction = 1;
+        let mode: 'to-separation' | 'pickup' | 'return-loaded' | 'drop' = 'to-separation';
+        let phaseTime = 0;
+
+        if (elapsed < travel) {
+          mode = 'to-separation';
+          distance = (elapsed / travel) * total;
+          direction = 1;
+        } else if (elapsed < travel + pickupDuration) {
+          mode = 'pickup';
+          distance = total;
+          direction = 1;
+          phaseTime = elapsed - travel;
+        } else if (elapsed < travel * 2 + pickupDuration) {
+          mode = 'return-loaded';
+          phaseTime = elapsed - travel - pickupDuration;
+          distance = total * (1 - phaseTime / travel);
+          direction = -1;
+        } else {
+          mode = 'drop';
+          phaseTime = elapsed - travel * 2 - pickupDuration;
+          distance = 0;
+          direction = -1;
+        }
+
+        const sample = at(distance);
+        const heights = route.elevation;
+        const baseY = heights && heights.length === points.length
+          ? THREE.MathUtils.lerp(heights[sample.segment], heights[sample.segment + 1] ?? heights[sample.segment], sample.u)
+          : 0;
+        g.position.set(sample.p.x, baseY, sample.p.y);
+        const dir = sample.tangent.clone().multiplyScalar(direction);
+        g.rotation.y = Math.atan2(-dir.y, dir.x);
+
+        // A caixa/palete sai da posição de separação, acompanha a empilhadeira
+        // na volta e desaparece quando é descarregada na Expedição.
+        const pickupHalf = pickupDuration * 0.48;
+        const dropHalf = dropDuration * 0.55;
+        if (route.sourcePallet) {
+          route.sourcePallet.visible =
+            mode === 'to-separation' ||
+            (mode === 'pickup' && phaseTime < pickupHalf) ||
+            (mode === 'drop' && phaseTime >= dropHalf);
+        }
+        if (carried) {
+          carried.visible =
+            mode === 'return-loaded' ||
+            (mode === 'pickup' && phaseTime >= pickupHalf) ||
+            (mode === 'drop' && phaseTime < dropHalf);
+        }
+
+        const smooth = (value: number) => {
+          const v = THREE.MathUtils.clamp(value, 0, 1);
+          return v * v * (3 - 2 * v);
+        };
+        let lift = 0;
+        if (mode === 'pickup') lift = 0.22 * smooth(phaseTime / pickupDuration);
+        else if (mode === 'return-loaded') lift = 0.22;
+        else if (mode === 'drop') lift = 0.22 * (1 - smooth(phaseTime / dropDuration));
+        carriage.position.y = 0.12 + lift + Math.sin(t * 1.3) * 0.008;
+
+        const moving = mode === 'to-separation' || mode === 'return-loaded';
+        if (moving) {
+          const spin = (speed * dt) / 0.26;
+          wheels.forEach((wheel) => { wheel.rotation.y += spin * direction; });
+        }
+        return;
+      }
+
+      // Comportamento original de ida e volta para empilhadeiras dos demais corredores.
+      const phase = (((t + (route.offset ?? 0)) / travel) % 2 + 2) % 2;
+      const distance = phase < 1 ? phase * total : (2 - phase) * total;
+      const sign = phase < 1 ? 1 : -1;
+      const sample = at(distance);
+      const heights = route.elevation;
+      const baseY = heights && heights.length === points.length
+        ? THREE.MathUtils.lerp(heights[sample.segment], heights[sample.segment + 1] ?? heights[sample.segment], sample.u)
+        : 0;
+      g.position.set(sample.p.x, baseY, sample.p.y);
+      const dir = sample.tangent.clone().multiplyScalar(sign);
+      g.rotation.y = Math.atan2(-dir.y, dir.x);
+      const spin = (speed * dt) / 0.26;
+      wheels.forEach((wheel) => { wheel.rotation.y += spin * sign; });
+      carriage.position.y = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3));
+    },
+  };
+}
 
 /** Pilha de chapas metálicas sobre palete (matéria-prima junto da máquina). */
 export function buildSheetStack(n = 6): THREE.Group {
