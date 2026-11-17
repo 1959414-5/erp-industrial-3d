@@ -33,15 +33,15 @@ function plant(x: number, z: number): THREE.Group {
 function porcelainFloorTexture(): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
   const c = cv.getContext('2d')!;
-  const grout = '#d6d2c9';
+  const grout = '#ddd9d1';
   c.fillStyle = grout; c.fillRect(0, 0, 512, 512);
 
   // Paginação 2 × 2; a repetição no piso forma placas grandes, como na referência.
   const tiles = [
-    { x: 3, y: 3, w: 251, h: 251, color: '#eeeae2', seed: 0 },
-    { x: 258, y: 3, w: 251, h: 251, color: '#eae6de', seed: 1 },
-    { x: 3, y: 258, w: 251, h: 251, color: '#ece8e0', seed: 2 },
-    { x: 258, y: 258, w: 251, h: 251, color: '#f0ece5', seed: 3 },
+    { x: 3, y: 3, w: 251, h: 251, color: '#efede8', seed: 0 },
+    { x: 258, y: 3, w: 251, h: 251, color: '#eeece7', seed: 1 },
+    { x: 3, y: 258, w: 251, h: 251, color: '#efede9', seed: 2 },
+    { x: 258, y: 258, w: 251, h: 251, color: '#f0eee9', seed: 3 },
   ];
 
   for (const tile of tiles) {
@@ -70,7 +70,7 @@ function porcelainFloorTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(4.5, 2);
+  tex.repeat.set(9, 4);
   tex.anisotropy = 8;
   return tex;
 }
@@ -79,7 +79,7 @@ function porcelainFloorTexture(): THREE.CanvasTexture {
 function wallpaperTexture(): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
   const c = cv.getContext('2d')!;
-  c.fillStyle = '#fdfdfc'; c.fillRect(0, 0, 256, 256);
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 256);
   c.strokeStyle = 'rgba(120,130,138,.012)'; c.lineWidth = 1;
   for (let y = 0; y < 256; y += 16) {
     c.beginPath(); c.moveTo(0, y); c.lineTo(256, y); c.stroke();
@@ -382,7 +382,7 @@ export function buildOffice() {
 
   // ── vidros e paredes ──────────────────────────────────────────
   const glassW = new THREE.MeshStandardMaterial({ color: 0xcbd0d6, transparent: true, opacity: 0.38, depthWrite: false });
-  const solidW = std(0xf6f7f7, 0.78);
+  const solidW = std(0xffffff, 0.82);
   const aluFrame = std(0x18181b, 0.35, 0.65);
 
   const WH = 4.0; // altura das paredes do escritório
@@ -459,13 +459,7 @@ export function buildOffice() {
 
   // teto removido — bloqueava a visão de cima (overview)
 
-  // Tapetes delimitam somente áreas de permanência, deixando o piso amadeirado visível.
-  group.add(
-    b(7.3, 0.018, 7.1, std(0xeeeae3, 0.99), -17.25, 0.12, 5.0),
-    // Tapete da copa acompanha o novo eixo de 90° do conjunto de descanso.
-    b(5.8, 0.022, 7.5, std(0xe9e5de, 0.99), -2.0, 0.12, 5.8),
-    b(11.8, 0.018, 8.7, std(0xf0f1ef, 0.99), 15, 0.12, 0),
-  );
+  // Piso contínuo em porcelanato: sem placas/tapetes retangulares sob os ambientes.
 
   // Plantas com folhagem verde em todos os setores; a posição da recepção fica livre para o café.
   group.add(plant(20.5, -8.5), plant(-20.5, 8.5), plant(20.5, 8.5));
