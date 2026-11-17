@@ -164,9 +164,10 @@ function replaceOfficeVisual(root: THREE.Group, key: IndustrialAssetKey, scale: 
   void loadIndustrialAsset(key).then(({ scene }) => {
     if (!root.parent) return;
     scene.scale.set(scale[0], scale[1], scale[2]);
-    // Os GLBs de cadeira usam +Z como lado do usuário; o posto de trabalho
-    // deste escritório posiciona o usuário olhando para -Z. Corrige no próprio asset.
-    if (key === 'officeTaskChair') scene.rotation.y = Math.PI;
+    // Os GLBs de cadeira usam +Z como lado do usuário. Corrige a orientação
+    // local antes de aplicar a rotação da posição, para alinhar encosto e assento
+    // com as cadeiras procedurais e deixar as poltronas voltadas para o vidro (+Z).
+    if (key === 'officeTaskChair' || key === 'officeLoungeChair') scene.rotation.y = Math.PI;
     root.clear();
     root.add(scene);
   }).catch((error) => {
