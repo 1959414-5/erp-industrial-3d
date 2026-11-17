@@ -29,71 +29,60 @@ function plant(x: number, z: number): THREE.Group {
   });
   return p;
 }
-/** Piso vinílico amadeirado: réguas claras, juntas desencontradas e veios discretos. */
-function woodFloorTexture(): THREE.CanvasTexture {
-  const cv = document.createElement('canvas');
-  cv.width = 512; cv.height = 512;
+/** Textura de porcelanato acetinado em placas grandes, bege-areia muito claro. */
+function porcelainFloorTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 512;
   const c = cv.getContext('2d')!;
-  const rowH = 512 / 6;
-  // Carvalho natural extra claro: fundo marfim, sem a aparência amarronzada do piso anterior.
-  const plankPalette = ['#eee5d5', '#e9dfcc', '#f3eadb', '#e6dcc9', '#f0e7d8', '#ebe1d0'];
-  c.fillStyle = '#d6cbb9'; c.fillRect(0, 0, 512, 512);
+  const grout = '#d6d2c9';
+  c.fillStyle = grout; c.fillRect(0, 0, 512, 512);
 
-  for (let row = 0; row < 6; row++) {
-    const y = row * rowH;
-    const joint = [118, 354, 214, 420, 150, 326][row];
-    const shade = plankPalette[row];
-    c.fillStyle = shade; c.fillRect(2, y + 2, 508, rowH - 4);
+  // Paginação 2 × 2; a repetição no piso forma placas grandes, como na referência.
+  const tiles = [
+    { x: 3, y: 3, w: 251, h: 251, color: '#eeeae2', seed: 0 },
+    { x: 258, y: 3, w: 251, h: 251, color: '#eae6de', seed: 1 },
+    { x: 3, y: 258, w: 251, h: 251, color: '#ece8e0', seed: 2 },
+    { x: 258, y: 258, w: 251, h: 251, color: '#f0ece5', seed: 3 },
+  ];
 
-    // Veios longos, muito suaves, para sugerir madeira sem criar ruído visual.
-    for (let grain = 0; grain < 8; grain++) {
-      const gy = y + 10 + grain * 9;
-      c.strokeStyle = grain % 2 ? 'rgba(255,255,255,.22)' : 'rgba(120,105,82,.035)';
-      c.lineWidth = grain % 3 === 0 ? 2 : 1;
-      c.beginPath(); c.moveTo(8, gy);
-      c.bezierCurveTo(135, gy - 3, 260, gy + 4, 504, gy - 1); c.stroke();
+  for (const tile of tiles) {
+    c.fillStyle = tile.color;
+    c.fillRect(tile.x, tile.y, tile.w, tile.h);
+
+    // Nuvens minerais delicadas, sem veios marcados nem aspecto envelhecido.
+    for (let i = 0; i < 7; i++) {
+      const gx = tile.x + 25 + ((i * 43 + tile.seed * 17) % 190);
+      const gy = tile.y + 22 + ((i * 61 + tile.seed * 29) % 190);
+      const radius = 28 + (i % 3) * 12;
+      const gradient = c.createRadialGradient(gx, gy, 2, gx, gy, radius);
+      gradient.addColorStop(0, 'rgba(255,255,255,.12)');
+      gradient.addColorStop(1, 'rgba(173,166,153,0)');
+      c.fillStyle = gradient;
+      c.fillRect(gx - radius, gy - radius, radius * 2, radius * 2);
     }
 
-    // Junta transversal alternada entre fileiras (paginação desencontrada).
-    c.fillStyle = '#d6cbb9';
-    c.fillRect(joint - 1, y + 2, 2, rowH - 4);
-    c.fillStyle = 'rgba(255,255,255,.48)';
-    c.fillRect(joint + 1, y + 4, 1, rowH - 8);
-    c.strokeStyle = 'rgba(130,116,95,.075)';
-    c.lineWidth = 1;
-    c.strokeRect(3, y + 3, 505, rowH - 6);
+    // Reflexo acetinado muito suave.
+    c.fillStyle = 'rgba(255,255,255,.12)';
+    c.fillRect(tile.x + 8, tile.y + 8, tile.w - 16, 2);
+    c.fillStyle = 'rgba(150,142,129,.045)';
+    c.fillRect(tile.x + 8, tile.y + tile.h - 3, tile.w - 16, 1);
   }
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(16, 20);
+  tex.repeat.set(4.5, 2);
   tex.anisotropy = 8;
   return tex;
 }
 
-/** Papel de parede em linho claro, com textura vertical discreta que combina com o piso de madeira. */
+/** Pintura branca fosca, praticamente lisa, com microtextura quase imperceptível. */
 function wallpaperTexture(): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
   const c = cv.getContext('2d')!;
-  // Branco quente quase neutro: parede limpa, sem o amarelado/bege anterior.
-  c.fillStyle = '#fbfbf9'; c.fillRect(0, 0, 256, 256);
-
-  // Trama de linho muito sutil.
-  for (let y = 0; y < 256; y += 4) {
-    c.strokeStyle = y % 8 === 0 ? 'rgba(130,139,145,.028)' : 'rgba(255,255,255,.32)';
-    c.lineWidth = 1; c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(256, y + 0.5); c.stroke();
-  }
-  for (let x = 0; x < 256; x += 8) {
-    c.strokeStyle = x % 32 === 0 ? 'rgba(145,153,157,.045)' : 'rgba(145,153,157,.018)';
-    c.lineWidth = x % 32 === 0 ? 1.2 : 0.7;
-    c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, 256); c.stroke();
-  }
-
-  // Linhas decorativas orgânicas, quase imperceptíveis, evitando um padrão excessivo.
-  c.strokeStyle = 'rgba(165,171,172,.025)'; c.lineWidth = 1.1;
-  for (let x = 18; x < 256; x += 64) {
-    c.beginPath(); c.moveTo(x, 12); c.bezierCurveTo(x + 5, 72, x - 4, 166, x + 2, 244); c.stroke();
+  c.fillStyle = '#fdfdfc'; c.fillRect(0, 0, 256, 256);
+  c.strokeStyle = 'rgba(120,130,138,.012)'; c.lineWidth = 1;
+  for (let y = 0; y < 256; y += 16) {
+    c.beginPath(); c.moveTo(0, y); c.lineTo(256, y); c.stroke();
   }
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -380,11 +369,11 @@ export function buildOffice() {
 
   const OW = 43.5, OD = 19.0;
 
-  // Base estrutural com acabamento vinílico amadeirado claro.
-  group.add(b(OW, 0.12, OD, std(0x9b8a76, 0.95), 0, 0, 0));
+  // Base estrutural e acabamento em porcelanato acetinado claro.
+  group.add(b(OW, 0.12, OD, std(0xd6d2c9, 0.96), 0, 0, 0));
   const floorSurface = new THREE.Mesh(
     new THREE.PlaneGeometry(OW, OD),
-    new THREE.MeshStandardMaterial({ map: woodFloorTexture(), color: 0xffffff, roughness: 0.9, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ map: porcelainFloorTexture(), color: 0xffffff, roughness: 0.76, metalness: 0 }),
   );
   floorSurface.rotation.x = -Math.PI / 2;
   floorSurface.position.y = 0.124;
@@ -474,7 +463,7 @@ export function buildOffice() {
   group.add(
     b(7.3, 0.018, 7.1, std(0xeeeae3, 0.99), -17.25, 0.12, 5.0),
     // Tapete da copa acompanha o novo eixo de 90° do conjunto de descanso.
-    b(4.7, 0.022, 7.5, std(0xe9e5de, 0.99), -2.0, 0.12, 5.8),
+    b(5.8, 0.022, 7.5, std(0xe9e5de, 0.99), -2.0, 0.12, 5.8),
     b(11.8, 0.018, 8.7, std(0xf0f1ef, 0.99), 15, 0.12, 0),
   );
 
@@ -526,10 +515,10 @@ export function buildOffice() {
   // armários de arquivos
   const cabB1 = buildCabinet(0.9, 1.7, 0.5); cabB1.position.set(1, 0.12, -8.9); group.add(cabB1); ed('cabinet-backoffice-1', cabB1);
   const cabB2 = buildCabinet(0.9, 1.7, 0.5); cabB2.position.set(2.9, 0.12, -8.9); group.add(cabB2); ed('cabinet-backoffice-2', cabB2);
-  // COPA E DESCANSO — o conjunto foi girado 90° para organizar melhor a circulação.
+  // COPA E DESCANSO — assentos voltados para a parede de vidro frontal (z positivo).
   const breakZone = new THREE.Group();
   breakZone.position.set(-2.0, 0.14, 5.8);
-  breakZone.rotation.y = Math.PI / 2;
+  breakZone.rotation.y = 0;
   group.add(breakZone);
 
   const loungeSofa = new THREE.Group();
@@ -544,11 +533,11 @@ export function buildOffice() {
   breakZone.add(loungeTable); ed('break-table', loungeTable);
 
   const loungeChairA = new THREE.Group(); loungeChairA.add(buildWaitChair(0x52677d));
-  loungeChairA.position.set(-2.65, 0, 0.75); loungeChairA.rotation.y = -Math.PI / 2;
+  loungeChairA.position.set(-2.65, 0, 0.75); loungeChairA.rotation.y = Math.PI;
   breakZone.add(loungeChairA); ed('break-chair-a', loungeChairA);
   replaceOfficeVisual(loungeChairA, 'officeLoungeChair');
   const loungeChairB = new THREE.Group(); loungeChairB.add(buildWaitChair(0x52677d));
-  loungeChairB.position.set(2.65, 0, 0.75); loungeChairB.rotation.y = Math.PI / 2;
+  loungeChairB.position.set(2.65, 0, 0.75); loungeChairB.rotation.y = Math.PI;
   breakZone.add(loungeChairB); ed('break-chair-b', loungeChairB);
   replaceOfficeVisual(loungeChairB, 'officeLoungeChair');
 
