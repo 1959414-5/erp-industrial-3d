@@ -6,11 +6,16 @@ export interface MachineModel { group: THREE.Group; update(dt: number, s: Status
 
 const std = (color: number, rough = 0.6, metal = 0.1) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 const M = {
-  white: std(0xf4f6f7, 0.5), gray: std(0x9aa1aa, 0.45, 0.5), dark: std(0x303b49, 0.5, 0.3), blue: std(0x303b49, 0.45, 0.2),
-  orange: std(0xf26a1b, 0.45, 0.2), metal: std(0xcfd6e2, 0.3, 0.8),
-  glass: new THREE.MeshStandardMaterial({ color: 0xd7dce1, transparent: true, opacity: 0.24, roughness: 0.18, metalness: 0.12, depthWrite: false }),
-  fence: new THREE.MeshStandardMaterial({ color: 0xffb36b, transparent: true, opacity: 0.22, depthWrite: false }),
-  screen: new THREE.MeshStandardMaterial({ color: 0x303b49, emissive: 0xe96b2c, emissiveIntensity: 0.28 }),
+  // Carenagens acetinadas, estrutura em grafite e aço escovado.
+  white: std(0xf1f3f5, 0.42, 0.08),
+  gray: std(0x8995a2, 0.48, 0.52),
+  dark: std(0x202b38, 0.48, 0.36),
+  blue: std(0x344357, 0.46, 0.28),
+  orange: std(0xef762f, 0.44, 0.22),
+  metal: std(0xc2ccd6, 0.28, 0.82),
+  glass: new THREE.MeshStandardMaterial({ color: 0xd7dce1, transparent: true, opacity: 0.21, roughness: 0.16, metalness: 0.14, depthWrite: false }),
+  fence: new THREE.MeshStandardMaterial({ color: 0xffb36b, transparent: true, opacity: 0.2, depthWrite: false }),
+  screen: new THREE.MeshStandardMaterial({ color: 0x172530, emissive: 0x45b5d1, emissiveIntensity: 0.34, roughness: 0.34, metalness: 0.12 }),
   spark: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xe96b2c, emissiveIntensity: 2.4 }),
 };
 const b = (w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0) => {
