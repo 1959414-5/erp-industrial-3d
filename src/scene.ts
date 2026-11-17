@@ -650,24 +650,15 @@ export class Factory {
     }
     if (this.wallMode === 'cutaway') this.updateCutaway();
     this.cartons.forEach((c, i) => { c.position.x = ((t * 1.6 + i * 2.5) % 30) - 20; });
-    // Em zoom aberto, animações pequenas não são perceptíveis. Atualizá-las
-    // apenas quando a câmera está próxima reduz CPU sem alterar os modelos.
-    if (cameraDistance <= 42) {
-      this.models.forEach((m, i) => {
-        if (this.camera.position.distanceTo(this.machineGroups[i].position) < 42) m.update(dt, this.statuses[i]);
-      });
-      this.operators.forEach((o) => {
-        if (this.camera.position.distanceTo(o.group.position) < 38) o.update(t);
-      });
-      this.markers.forEach((m) => {
-        if (this.camera.position.distanceTo(m.group.position) < 48) m.update(t);
-      });
-      this.props.forEach((p) => {
-        if (this.camera.position.distanceTo(p.group.position) < 42) p.update(t);
-      });
-      if (this.camera.position.distanceTo(this.office.group.position) < 38) this.office.update(t);
-      this.assetMixers.forEach((mixer) => mixer.update(dt));
-    }
+    // Mantém todas as animações ativas em qualquer distância de câmera.
+    // As rotinas recebem o tempo global (t), então continuam sincronizadas
+    // mesmo durante zoom e transições entre os módulos.
+    this.models.forEach((m, i) => m.update(dt, this.statuses[i]));
+    this.operators.forEach((o) => o.update(t));
+    this.markers.forEach((m) => m.update(t));
+    this.props.forEach((p) => p.update(t));
+    this.office.update(t);
+    this.assetMixers.forEach((mixer) => mixer.update(dt));
     if (this.selected) {
       const projected = this.foot(this.selected).anchor.clone().project(this.camera);
       const rect = this.canvas.getBoundingClientRect();
