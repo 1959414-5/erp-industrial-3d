@@ -15,13 +15,19 @@ export function buildFloor(): THREE.Mesh {
   const S = (u: number) => (u / FW) * W;
 
   // base de concreto + juntas
-  g.fillStyle = '#e9edf3'; g.fillRect(0, 0, W, H);
-  g.strokeStyle = 'rgba(150,163,184,.16)'; g.lineWidth = 2;
+  g.fillStyle = '#e6eaef'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(112,126,143,.14)'; g.lineWidth = 2;
   for (let x = -52; x <= 52; x += 5) { g.beginPath(); g.moveTo(X(x), 0); g.lineTo(X(x), H); g.stroke(); }
   for (let z = -36; z <= 36; z += 5) { g.beginPath(); g.moveTo(0, Z(z)); g.lineTo(W, Z(z)); g.stroke(); }
 
-  const zone = (x0: number, z0: number, x1: number, z1: number, fill: string) => {
-    g.fillStyle = fill; g.fillRect(X(x0), Z(z0), X(x1) - X(x0), Z(z1) - Z(z0));
+  const zone = (x0: number, z0: number, x1: number, z1: number, fill: string, edge: string) => {
+    const x = X(x0), y = Z(z0), w = X(x1) - x, h = Z(z1) - y;
+    g.save();
+    g.fillStyle = fill; g.fillRect(x, y, w, h);
+    g.strokeStyle = edge; g.lineWidth = 3; g.setLineDash([22, 15]);
+    g.strokeRect(x + 2, y + 2, w - 4, h - 4);
+    g.setLineDash([]);
+    g.restore();
   };
   const hazard = (x0: number, z0: number, x1: number, z1: number) => {
     const bw = S(0.5);
@@ -29,13 +35,16 @@ export function buildFloor(): THREE.Mesh {
     g.beginPath(); g.rect(X(x0), Z(z0), X(x1) - X(x0), Z(z1) - Z(z0));
     g.rect(X(x0) + bw, Z(z0) + bw, X(x1) - X(x0) - 2 * bw, Z(z1) - Z(z0) - 2 * bw);
     g.clip('evenodd');
-    g.fillStyle = '#f5c518'; g.fillRect(X(x0), Z(z0), X(x1) - X(x0), Z(z1) - Z(z0));
+    g.fillStyle = '#e9c45a'; g.fillRect(X(x0), Z(z0), X(x1) - X(x0), Z(z1) - Z(z0));
     g.strokeStyle = '#2b2f36'; g.lineWidth = bw * 0.55;
     for (let i = -H; i < W + H; i += bw * 1.4) { g.beginPath(); g.moveTo(X(x0) + i, Z(z0)); g.lineTo(X(x0) + i - (Z(z1) - Z(z0)), Z(z1)); g.stroke(); }
     g.restore();
   };
   const lane = (x0: number, z0: number, x1: number, z1: number, wpx = 12) => {
-    g.strokeStyle = '#f5c518'; g.lineWidth = wpx; g.lineCap = 'round';
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(39,51,66,.24)'; g.lineWidth = wpx + 7;
+    g.beginPath(); g.moveTo(X(x0), Z(z0)); g.lineTo(X(x1), Z(z1)); g.stroke();
+    g.strokeStyle = '#e5b638'; g.lineWidth = wpx;
     g.beginPath(); g.moveTo(X(x0), Z(z0)); g.lineTo(X(x1), Z(z1)); g.stroke();
   };
   const chevronH = (x: number, z: number, dir = 1) => {
@@ -57,13 +66,13 @@ export function buildFloor(): THREE.Mesh {
 
   // ── ZONAS ─────────────────────────────────────────────────────
   // Produção (centro-esquerda, onde ficam as máquinas)
-  zone(-39, -17, 14, 7, 'rgba(59,130,246,.08)');
+  zone(-39, -17, 14, 7, 'rgba(59,130,246,.075)', 'rgba(59,130,246,.36)');
   // Estoque (direita, com paletes e porta-paletes)
-  zone(18, -34, 51, 10, 'rgba(242,167,27,.09)');
+  zone(18, -34, 51, 10, 'rgba(242,167,27,.075)', 'rgba(217,139,38,.38)');
   // Expedição (frente-esquerda)
-  zone(-48, 15, -25, 34, 'rgba(34,181,115,.10)');
+  zone(-48, 15, -25, 34, 'rgba(34,181,115,.085)', 'rgba(34,145,105,.38)');
   // Comercial/Escritório (frente-direita)
-  zone(5.5, 11, 49, 30, 'rgba(124,92,252,.07)');
+  zone(5.5, 11, 49, 30, 'rgba(124,92,252,.06)', 'rgba(124,92,252,.32)');
 
   // ── ESTACIONAMENTO (asfalto escuro + vagas + símbolo P) ──────
   g.fillStyle = '#6b7280'; g.fillRect(X(-23), Z(14), X(-1) - X(-23), Z(36) - Z(14));
