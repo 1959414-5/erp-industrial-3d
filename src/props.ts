@@ -333,8 +333,9 @@ export function buildExpedition(): THREE.Group {
     const p = buildPallet(w); p.scale.setScalar(0.82); p.position.set(x, 0.77, z); g.add(p);
   }
 
-  // DEPÓSITO DE EXPEDIÇÃO — continuação do galpão, diretamente atrás dos dois portões.
-  // Estende o espaço para z negativo a partir da parede das docas (z=-2), sem ocupar o pátio.
+  // DEPÓSITO DE EXPEDIÇÃO — compacto para preservar integralmente a faixa verde de pedestres.
+  // Parede dos portões em z=-2; a nova parede de fundo termina em z=-9.35,
+  // equivalente ao eixo global z=15.15, deixando 0.65 m livres antes da faixa verde (z<=14.5).
   const depotFloor = std(0xcbd2d9, 0.92);
   const depotWall = std(0xe8edf1, 0.82);
   const depotFrame = std(0x465668, 0.5, 0.28);
@@ -343,54 +344,53 @@ export function buildExpedition(): THREE.Group {
   const depotBoxB = std(0xd8b782, 0.9);
   const depotBoxC = std(0xbfcbd4, 0.72, 0.02);
 
-  // Piso ligado diretamente aos dois vãos de carregamento.
-  g.add(b(14.2, 0.16, 12.2, depotFloor, 0, -0.02, -8.12));
+  // Piso do depósito recuado e conectado aos dois vãos da doca.
+  g.add(b(14.2, 0.16, 7.35, depotFloor, 0, -0.02, -5.675));
 
-  // Fechamento lateral e de fundo. A parede dos portões continua sendo a fachada de acesso.
+  // Paredes laterais e fundo dentro do limite da área industrial, sem avançar sobre pedestres.
   g.add(
-    b(0.18, 4.25, 12.2, depotWall, -7.1, 0.12, -8.12),
-    b(0.18, 4.25, 12.2, depotWall, 7.1, 0.12, -8.12),
-    b(14.2, 4.25, 0.18, depotWall, 0, 0.12, -14.22),
+    b(0.18, 4.25, 7.35, depotWall, -7.1, 0.12, -5.675),
+    b(0.18, 4.25, 7.35, depotWall, 7.1, 0.12, -5.675),
+    b(14.2, 4.25, 0.18, depotWall, 0, 0.12, -9.35),
   );
 
-  // Estrutura superior do mesmo galpão, sem cobertura opaca para preservar a leitura da câmera 3D.
+  // Estrutura superior aberta para manter a visualização interna em 3D.
   for (const x of [-7.0, -3.55, 0, 3.55, 7.0]) {
-    g.add(b(0.18, 4.25, 0.18, depotFrame, x, 0.12, -14.08));
+    g.add(b(0.18, 4.25, 0.18, depotFrame, x, 0.12, -9.21));
     g.add(b(0.16, 4.05, 0.16, depotFrame, x, 0.12, -2.42));
   }
-  for (const z of [-2.45, -6.25, -10.15, -14.0]) {
+  for (const z of [-2.45, -4.75, -7.05, -9.22]) {
     g.add(b(14.1, 0.16, 0.16, depotFrame, 0, 4.28, z));
   }
   for (const x of [-6.8, -3.4, 0, 3.4, 6.8]) {
-    g.add(b(0.09, 0.1, 11.6, depotFrame, x, 4.18, -8.1));
+    g.add(b(0.09, 0.1, 6.75, depotFrame, x, 4.18, -5.7));
   }
 
-  // Faixas internas conduzem os volumes dos portões até a área de staging.
+  // Guias internas curtas; terminam antes da área de staging e não cruzam o corredor central.
   const lanePaint = std(0xe5c24a, 0.72);
   for (const x of [-2.8, 2.8]) {
-    g.add(b(0.055, 0.018, 8.4, lanePaint, x, 0.075, -8.0));
-    g.add(b(1.15, 0.018, 0.055, lanePaint, x, 0.075, -12.15));
+    g.add(b(0.055, 0.018, 4.2, lanePaint, x, 0.075, -4.55));
   }
-  g.add(b(12.8, 0.018, 0.08, std(0xe96b2c, 0.55), 0, 0.075, -13.55));
+  g.add(b(9.0, 0.018, 0.08, std(0xe96b2c, 0.55), 0, 0.075, -8.9));
 
-  // Estantes metálicas nas laterais, mantendo livre o corredor central.
+  // Estantes laterais com dois módulos de profundidade e três níveis de armazenagem.
   const buildDispatchRacks = (x: number, side: -1 | 1) => {
     const rack = new THREE.Group();
-    for (let bay = 0; bay < 3; bay++) {
-      const z = -5.4 - bay * 3.45;
+    for (let bay = 0; bay < 2; bay++) {
+      const z = -3.95 - bay * 3.0;
       for (const y of [0.55, 1.58, 2.62]) {
         rack.add(
-          b(0.11, 0.12, 2.85, depotShelf, x, y, z),
-          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z - 1.38),
-          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z + 1.38),
+          b(0.11, 0.12, 2.65, depotShelf, x, y, z),
+          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z - 1.28),
+          b(0.1, 0.95, 0.1, depotFrame, x, y - 0.42, z + 1.28),
         );
       }
       for (let item = 0; item < 2; item++) {
         const material = (bay + item) % 3 === 0 ? depotBoxC : (bay + item) % 2 ? depotBoxA : depotBoxB;
-        const itemZ = z + (item ? 0.66 : -0.66);
+        const itemZ = z + (item ? 0.62 : -0.62);
         rack.add(
-          b(0.78, 0.66, 0.82, material, x - side * 0.08, 1.0, itemZ),
-          b(0.78, 0.66, 0.82, material, x - side * 0.08, 2.04, itemZ),
+          b(0.76, 0.62, 0.76, material, x - side * 0.08, 0.98, itemZ),
+          b(0.76, 0.62, 0.76, material, x - side * 0.08, 2.02, itemZ),
         );
       }
     }
@@ -399,28 +399,27 @@ export function buildExpedition(): THREE.Group {
   buildDispatchRacks(-5.75, -1);
   buildDispatchRacks(5.75, 1);
 
-  // Staging central: paletes embalados prontos para seguir às docas.
+  // Pequena área de staging no fundo, fora dos corredores de acesso aos portões.
   const stagingPositions: [number, number, boolean][] = [
-    [-2.65, -10.65, true], [0, -10.65, false], [2.65, -10.65, true],
-    [-2.65, -7.65, false], [2.65, -7.65, true],
+    [-2.55, -7.75, true], [0, -7.75, false], [2.55, -7.75, true],
   ];
   for (const [x, z, wrapped] of stagingPositions) {
     const pallet = buildPallet(wrapped);
-    pallet.scale.set(0.9, 0.9, 0.9);
+    pallet.scale.set(0.82, 0.84, 0.82);
     pallet.position.set(x, 0.08, z);
     g.add(pallet);
   }
 
-  // Bancada de conferência e identificação de volumes no fundo do galpão.
+  // Bancada compacta de conferência junto à parede do fundo.
   g.add(
-    b(2.0, 0.92, 0.82, depotFrame, 0, 0.48, -13.0),
-    b(2.08, 0.08, 0.9, depotShelf, 0, 0.98, -13.0),
-    b(0.72, 0.06, 0.42, depotBoxC, -0.42, 1.08, -13.0),
-    b(0.52, 0.06, 0.42, depotBoxB, 0.42, 1.08, -13.0),
+    b(1.8, 0.82, 0.58, depotFrame, 0, 0.43, -8.62),
+    b(1.9, 0.08, 0.66, depotShelf, 0, 0.9, -8.62),
+    b(0.58, 0.06, 0.34, depotBoxC, -0.38, 1.0, -8.62),
+    b(0.46, 0.06, 0.34, depotBoxB, 0.38, 1.0, -8.62),
   );
   const depotSign = signBoard('DEPÓSITO DE EXPEDIÇÃO');
-  depotSign.scale.set(1.18, 1.0, 1);
-  depotSign.position.set(0, 3.42, -14.08);
+  depotSign.scale.set(1.12, 0.95, 1);
+  depotSign.position.set(0, 3.42, -9.22);
   g.add(depotSign);
   // caminhão removido daqui — agora é animado externamente (scene.ts)
 
