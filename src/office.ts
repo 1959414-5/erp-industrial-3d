@@ -29,6 +29,82 @@ function plant(x: number, z: number): THREE.Group {
   });
   return p;
 }
+/** Piso vinílico amadeirado: réguas claras, juntas desencontradas e veios discretos. */
+function woodFloorTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = 512;
+  const c = cv.getContext('2d')!;
+  const rowH = 512 / 6;
+  const plankPalette = ['#d6bd9a', '#cdb28c', '#ddc6a4', '#c7ad88', '#d9c09a', '#cfb48d'];
+  c.fillStyle = '#927557'; c.fillRect(0, 0, 512, 512);
+
+  for (let row = 0; row < 6; row++) {
+    const y = row * rowH;
+    const joint = [118, 354, 214, 420, 150, 326][row];
+    const shade = plankPalette[row];
+    c.fillStyle = shade; c.fillRect(2, y + 2, 508, rowH - 4);
+
+    // Veios longos, muito suaves, para sugerir madeira sem criar ruído visual.
+    for (let grain = 0; grain < 8; grain++) {
+      const gy = y + 10 + grain * 9;
+      c.strokeStyle = grain % 2 ? 'rgba(255,255,255,.13)' : 'rgba(105,78,48,.075)';
+      c.lineWidth = grain % 3 === 0 ? 2 : 1;
+      c.beginPath(); c.moveTo(8, gy);
+      c.bezierCurveTo(135, gy - 3, 260, gy + 4, 504, gy - 1); c.stroke();
+    }
+
+    // Junta transversal alternada entre fileiras (paginação desencontrada).
+    c.fillStyle = '#927557';
+    c.fillRect(joint - 2, y + 2, 3, rowH - 4);
+    c.fillStyle = 'rgba(255,255,255,.25)';
+    c.fillRect(joint + 1, y + 4, 1, rowH - 8);
+    c.strokeStyle = 'rgba(115,83,51,.12)';
+    c.lineWidth = 1;
+    c.strokeRect(3, y + 3, 505, rowH - 6);
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 20);
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/** Tela de recepção com mensagem institucional neutra e identidade visual da plataforma. */
+function buildReceptionDisplay(): THREE.Group {
+  const g = new THREE.Group();
+  const graphite = std(0x202936, 0.38, 0.35);
+  const orange = std(0xe96b2c, 0.42);
+  const cv = document.createElement('canvas'); cv.width = 640; cv.height = 360;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = '#172536'; c.fillRect(0, 0, 640, 360);
+  c.fillStyle = '#e96b2c'; c.fillRect(0, 0, 640, 16);
+  c.fillStyle = '#edf2f7'; c.font = '700 48px "IBM Plex Sans", Arial';
+  c.fillText('BEM-VINDO', 42, 112);
+  c.fillStyle = '#c3cfdb'; c.font = '500 27px "IBM Plex Sans", Arial';
+  c.fillText('ATENDIMENTO COMERCIAL', 44, 158);
+  c.fillStyle = '#e96b2c'; c.fillRect(44, 195, 160, 8);
+  c.fillStyle = '#c8d2dd'; c.font = '400 20px "IBM Plex Sans", Arial';
+  c.fillText('VENDAS  •  ORÇAMENTOS  •  SOLUÇÕES', 44, 246);
+  c.fillStyle = '#34485c'; c.fillRect(430, 82, 160, 210);
+  [72, 122, 96, 154, 176].forEach((height, index) => {
+    c.fillStyle = index === 3 ? '#e96b2c' : '#91a4b8';
+    c.fillRect(450 + index * 25, 266 - height, 15, height);
+  });
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const screen = new THREE.MeshStandardMaterial({
+    map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.35,
+  });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(2.92, 1.72, 0.075), graphite);
+  frame.position.y = 0.86; frame.castShadow = true; g.add(frame);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(2.78, 1.58), screen);
+  panel.position.set(0, 0.86, 0.041); g.add(panel);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(2.78, 0.035, 0.012), orange);
+  trim.position.set(0, 1.67, 0.045); g.add(trim);
+  return g;
+}
+
 /** Plaquinha de texto. */
 function labelBoard(txt: string): THREE.Mesh {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64; const c = cv.getContext('2d')!;
@@ -273,8 +349,16 @@ export function buildOffice() {
 
   const OW = 43.5, OD = 19.0;
 
-  // piso
-  group.add(b(OW, 0.12, OD, std(0xdfe2e6, 0.95), 0, 0, 0));
+  // Base estrutural com acabamento vinílico amadeirado claro.
+  group.add(b(OW, 0.12, OD, std(0x9b8a76, 0.95), 0, 0, 0));
+  const floorSurface = new THREE.Mesh(
+    new THREE.PlaneGeometry(OW, OD),
+    new THREE.MeshStandardMaterial({ map: woodFloorTexture(), roughness: 0.84, metalness: 0 }),
+  );
+  floorSurface.rotation.x = -Math.PI / 2;
+  floorSurface.position.y = 0.124;
+  floorSurface.receiveShadow = true;
+  group.add(floorSurface);
 
   // ── vidros e paredes ──────────────────────────────────────────
   const glassW = new THREE.MeshStandardMaterial({ color: 0xcbd0d6, transparent: true, opacity: 0.38, depthWrite: false });
@@ -335,11 +419,11 @@ export function buildOffice() {
 
   // teto removido — bloqueava a visão de cima (overview)
 
-  // Tapetes setoriais: recepção/espera, backoffice e sala de reunião.
+  // Tapetes delimitam somente áreas de permanência, deixando o piso amadeirado visível.
   group.add(
-    b(7.3, 0.025, 7.1, std(0xe9ecef, 0.96), -17.25, 0.12, 5.0),
-    b(14, 0.03, 15, std(0xe2e4e7, 0.95), 0.25, 0.12, 0),
-    b(11.8, 0.025, 8.7, std(0xe7ebef, 0.96), 15, 0.12, 0),
+    b(7.3, 0.018, 7.1, std(0xd8cdbd, 0.98), -17.25, 0.12, 5.0),
+    b(8.8, 0.022, 4.7, std(0xcfc4b3, 0.98), -1.45, 0.12, 6.85),
+    b(11.8, 0.018, 8.7, std(0xd8dce0, 0.98), 15, 0.12, 0),
   );
 
   // Plantas com folhagem verde em todos os setores; a posição da recepção fica livre para o café.
@@ -372,8 +456,11 @@ export function buildOffice() {
   const wc2 = new THREE.Group(); wc2.add(buildWaitChair(0x394454));
   wc2.position.set(-15.6, 0.12, 6.3); wc2.rotation.y = -Math.PI / 2; group.add(wc2); ed('waitchair-2', wc2);
   replaceOfficeVisual(wc2, 'officeLoungeChair');
-  // Estação de café e autoatendimento junto à entrada, fora do corredor de circulação.
-  const coffee = buildCoffeeStation(); coffee.position.set(-19.25, 0.12, -8.45); group.add(coffee); ed('coffee-station', coffee);
+  // Tela informativa montada na divisória interna, voltada para a recepção.
+  const receptionDisplay = buildReceptionDisplay();
+  receptionDisplay.position.set(-7.83, 1.72, -7.2);
+  receptionDisplay.rotation.y = -Math.PI / 2;
+  group.add(receptionDisplay); ed('reception-display', receptionDisplay);
 
   // ── SALA 2 — Backoffice (x -7.75 a +8.25) ────────────────────
   // 3 impressoras na parede do fundo
@@ -387,10 +474,36 @@ export function buildOffice() {
   // armários de arquivos
   const cabB1 = buildCabinet(0.9, 1.7, 0.5); cabB1.position.set(1, 0.12, -8.9); group.add(cabB1); ed('cabinet-backoffice-1', cabB1);
   const cabB2 = buildCabinet(0.9, 1.7, 0.5); cabB2.position.set(2.9, 0.12, -8.9); group.add(cabB2); ed('cabinet-backoffice-2', cabB2);
-  // canto de reunião informal na área aberta da frente (antes vazia)
-  const meetTable = buildCoffeeTable(); meetTable.position.set(2, 0.12, 6.5); group.add(meetTable); ed('meeting-table', meetTable);
-  const meetC1 = buildWaitChair(0x394454); meetC1.position.set(0.8, 0.12, 7.3); meetC1.rotation.y = Math.PI; group.add(meetC1); ed('meeting-chair-1', meetC1);
-  const meetC2 = buildWaitChair(0x394454); meetC2.position.set(3.2, 0.12, 5.7); meetC2.rotation.y = 0; group.add(meetC2); ed('meeting-chair-2', meetC2);
+  // COPA E DESCANSO — substitui as cadeiras soltas por um lounge e uma estação de café.
+  const loungeSofa = new THREE.Group();
+  loungeSofa.add(buildSofa(2.35, 0x52677d));
+  loungeSofa.position.set(-2.0, 0.14, 5.65);
+  group.add(loungeSofa); ed('break-sofa', loungeSofa);
+  replaceOfficeVisual(loungeSofa, 'officeSofa', [1.28, 1.0, 1.0]);
+
+  const loungeTable = buildCoffeeTable();
+  loungeTable.scale.set(1.45, 1, 1.35);
+  loungeTable.position.set(-2.0, 0.14, 7.0);
+  group.add(loungeTable); ed('break-table', loungeTable);
+
+  const loungeChairA = new THREE.Group(); loungeChairA.add(buildWaitChair(0x52677d));
+  loungeChairA.position.set(-4.65, 0.14, 7.05); loungeChairA.rotation.y = -Math.PI / 2;
+  group.add(loungeChairA); ed('break-chair-a', loungeChairA);
+  replaceOfficeVisual(loungeChairA, 'officeLoungeChair');
+  const loungeChairB = new THREE.Group(); loungeChairB.add(buildWaitChair(0x52677d));
+  loungeChairB.position.set(0.65, 0.14, 7.05); loungeChairB.rotation.y = Math.PI / 2;
+  group.add(loungeChairB); ed('break-chair-b', loungeChairB);
+  replaceOfficeVisual(loungeChairB, 'officeLoungeChair');
+
+  const coffee = buildCoffeeStation();
+  coffee.position.set(6.45, 0.14, 6.45);
+  coffee.rotation.y = -Math.PI / 2;
+  group.add(coffee); ed('coffee-station', coffee);
+  const breakSign = labelBoard('COPA  •  DESCANSO');
+  breakSign.scale.set(0.43, 0.43, 1);
+  breakSign.position.set(6.45, 2.65, 9.36);
+  breakSign.rotation.y = Math.PI;
+  group.add(breakSign);
 
   // ── SALA 3 — Sala de reunião (x +8.25 a +21.75) ──────────────
   // Tela fixada na parede externa do fundo; a abertura da porta da divisória permanece livre.
