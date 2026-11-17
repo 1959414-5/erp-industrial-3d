@@ -321,6 +321,52 @@ export function buildRoamer(path: [number, number][], seed = 0, speed = 1.3): Pr
   } };
 }
 
+/** Funcionário separando caixas: ergue um volume, aproxima-o do corpo e devolve-o à prateleira.
+ *  É cenográfico e não altera estoque, lote ou qualquer dado operacional. */
+export function buildWarehousePicker(seed = 0): Prop {
+  const g = new THREE.Group();
+  const worker = buildWorker(seed);
+  worker.group.scale.setScalar(0.9);
+  g.add(worker.group);
+
+  const cartonMat = std(seed % 2 ? 0xc79a64 : 0xd4aa76, 0.88, 0);
+  const tapeMat = std(0x526171, 0.74, 0.02);
+  const labelMat = std(0xf1eee7, 0.9, 0);
+  const carton = new THREE.Group();
+  carton.add(
+    b(0.42, 0.32, 0.34, cartonMat, 0, 0, 0),
+    b(0.045, 0.012, 0.345, tapeMat, 0, 0.32, 0),
+    b(0.012, 0.012, 0.34, tapeMat, 0, 0.16, 0),
+    b(0.15, 0.1, 0.012, labelMat, 0.11, 0.14, 0.176),
+  );
+  g.add(carton);
+
+  // Caixa de apoio e pequeno pallet junto ao funcionário.
+  const pallet = new THREE.Group();
+  pallet.add(
+    b(0.92, 0.12, 0.7, std(0xb78a58, 0.9), 0, 0, 0),
+    b(0.86, 0.34, 0.62, cartonMat, 0, 0.12, 0),
+    b(0.05, 0.012, 0.63, tapeMat, 0, 0.46, 0),
+  );
+  pallet.position.set(0.72, 0, -0.78);
+  g.add(pallet);
+
+  const shelfPoint = new THREE.Vector3(0.62, 0.84, -0.95);
+  const handPoint = new THREE.Vector3(0.02, 1.08, -0.36);
+  return {
+    group: g,
+    update(t: number) {
+      worker.update(t);
+      const phase = ((t * 0.23 + seed * 0.071) % 1 + 1) % 1;
+      const triangle = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+      const eased = triangle * triangle * (3 - 2 * triangle);
+      carton.position.lerpVectors(shelfPoint, handPoint, eased);
+      carton.rotation.y = Math.sin(t * 1.8 + seed) * 0.08;
+      carton.rotation.x = Math.sin(t * 1.2 + seed * 0.4) * 0.025;
+    },
+  };
+}
+
 /** Placa de setor com moldura, faixa de identificação e texto de alto contraste. */
 export function buildSectorSign(text: string, hex = 0x1f2a44): THREE.Group {
   const g = new THREE.Group();

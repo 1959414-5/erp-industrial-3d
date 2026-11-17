@@ -5,7 +5,7 @@ import { buildMachine, type MachineModel } from './machines';
 import { SheetLots } from './stock';
 import { buildOffice } from './office';
 import { buildWorker, buildForklift, buildExpedition, buildSheetStack, buildMarker, buildRack,
-  buildRoamer, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
+  buildRoamer, buildWarehousePicker, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
 import { buildFloor } from './floor';
 import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
@@ -186,6 +186,44 @@ export class Factory {
     void this.replaceRackModules(stkRack1, 'palletRack', 4, 3.2, 3.2, 'EMBALAGENS');
     void this.replaceRackModules(stkRack2, 'palletRack', 4, 3.15, 3.2, 'CONSUMÍVEIS');
     void this.replaceRackModules(stkRack3, 'palletRack', 4, 3.2, 3.2, 'ACESSÓRIOS');
+
+    // Fileira complementar no fundo: quatro módulos à esquerda da fileira existente.
+    const stkRack4 = new THREE.Group();
+    stkRack4.add(buildRack(13.5));
+    stkRack4.position.set(27.0, 0, -31.5);
+    this.scene.add(stkRack4);
+    this.addEditable('rack-stock-4', stkRack4);
+    void this.replaceRackModules(stkRack4, 'palletRack', 4, 3.2, 3.2, 'FERRAMENTAS');
+
+    // Fileira central: quatro módulos entre as duas linhas originais, mantendo corredores dos dois lados.
+    const stkRack5 = new THREE.Group();
+    stkRack5.add(buildRack(13.5));
+    stkRack5.position.set(35.25, 0, -25.0);
+    this.scene.add(stkRack5);
+    this.addEditable('rack-stock-5', stkRack5);
+    void this.replaceRackModules(stkRack5, 'palletRack', 4, 3.2, 3.2, 'SEPARAÇÃO');
+
+    // Funcionários circulando pelos corredores externos e entre as fileiras.
+    const warehouseRoutes: [number, number][][] = [
+      [[18.7, -28.2], [50.5, -28.2], [50.5, -21.8], [18.7, -21.8], [18.7, -28.2]],
+      [[18.7, -33.4], [50.5, -33.4], [50.5, -15.8], [18.7, -15.8], [18.7, -33.4]],
+    ];
+    warehouseRoutes.forEach((route, index) => {
+      const walker = buildRoamer(route, 41 + index * 7, 1.05 + index * 0.12);
+      this.props.push(walker);
+      this.scene.add(walker.group);
+    });
+
+    // Dois separadores trabalham junto às prateleiras, movimentando caixas em ciclos suaves.
+    const pickerA = buildWarehousePicker(71);
+    pickerA.group.position.set(25.2, 0, -28.35);
+    pickerA.group.rotation.y = Math.PI;
+    this.props.push(pickerA); this.scene.add(pickerA.group);
+
+    const pickerB = buildWarehousePicker(83);
+    pickerB.group.position.set(35.25, 0, -22.15);
+    pickerB.group.rotation.y = Math.PI;
+    this.props.push(pickerB); this.scene.add(pickerB.group);
 
     // ── MATÉRIA-PRIMA — estantes para chapas ──────────────────────
     const rawA = new THREE.Group(); rawA.add(buildRack(14)); rawA.position.set(-26, 0, -16); this.scene.add(rawA);
@@ -444,7 +482,7 @@ export class Factory {
     count: number,
     spacing: number,
     targetHeight: number,
-    category: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS',
+    category: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS' | 'FERRAMENTAS' | 'SEPARAÇÃO',
   ) {
     type LoadKind = 'carton' | 'bin' | 'wrapped' | 'roll';
     type LoadItem = { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number; rotation: number };
@@ -508,6 +546,12 @@ export class Factory {
             addItem('bin', lowX, shelfTop, 0, 0.92, boxHeight, 0.72, 0x647b91);
             addItem('wrapped', highX, shelfTop, 0, 0.96, boxHeight, 0.72, 0xc5ced7);
           }
+        } else if (category === 'FERRAMENTAS') {
+          addItem('bin', lowX, shelfTop, 0, 0.92, boxHeight, 0.72, 0x526579);
+          addItem('carton', highX, shelfTop, 0, 0.88, boxHeight, 0.68, 0xc7a16f);
+        } else if (category === 'SEPARAÇÃO') {
+          addItem('wrapped', lowX, shelfTop, 0, 0.96, boxHeight, 0.72, 0xc9d2da);
+          addItem('bin', highX, shelfTop, 0, 0.92, boxHeight, 0.72, 0x6e8497);
         } else {
           addItem('bin', lowX, shelfTop, 0, 0.94, boxHeight, 0.72, bay % 2 ? 0x657f91 : 0x748b9a);
           addItem(level === 1 ? 'wrapped' : 'bin', highX, shelfTop, 0,
@@ -572,7 +616,7 @@ export class Factory {
     count: number,
     spacing: number,
     targetHeight: number,
-    auxiliaryCategory?: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS',
+    auxiliaryCategory?: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS' | 'FERRAMENTAS' | 'SEPARAÇÃO',
   ) {
     try {
       const asset = await loadIndustrialAsset(key);
