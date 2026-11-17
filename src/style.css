@@ -1181,3 +1181,24 @@ body.presentation-mode #ai{display:none!important}
   .ai-statusline{padding:0 12px}
   .ai-body{padding:10px}
 }
+
+
+/* Fase 4: filtros compactos e leitura rápida da lista de máquinas */
+.machine-toolbar{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin:0 0 8px}
+.machine-filters{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.machine-filter{
+  display:inline-flex;align-items:center;gap:6px;min-height:25px;padding:4px 8px;
+  border:1px solid #e4e8ec;border-radius:6px;background:#fff;color:#697482;
+  font:750 7px Inter,sans-serif;cursor:pointer;transition:background .16s,border-color .16s,color .16s;
+}
+.machine-filter b{color:inherit;font-size:7px;font-weight:850}
+.machine-filter:hover{border-color:#b9c2cc;background:#f6f8fa;color:#344254}
+.machine-filter.on{border-color:#344254;background:#344254;color:#fff}
+.machine-filter[data-machine-filter="down"].on{border-color:#c94d4d;background:#c94d4d}
+.machine-filter[data-machine-filter="run"].on{border-color:#238a60;background:#238a60}
+.machine-filter[data-machine-filter="idle"].on{border-color:#8a929c;background:#8a929c}
+#bottom .machine-filters{margin-bottom:2px}
+@media(max-width:520px){
+  .machine-filters{gap:4px}
+  .machine-filter{min-height:23px;padding:4px 6px;font-size:6.5px}
+}

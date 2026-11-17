@@ -191,45 +191,67 @@ export function buildExpedition(): THREE.Group {
   return g;
 }
 
-/** Marcador flutuante (pino tipo "gota") sobre a máquina, com rótulo billboard
- *  opcional. A cor reflete o status (verde/âmbar/vermelho). */
-export function buildMarker(name: string | null, hex: number): Prop {
+/** Marcador e etiqueta billboard de cada equipamento. A cor reflete o estado operacional. */
+export function buildMarker(name: string, hex: number, detail: string): Prop {
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.6, roughness: 0.3 });
   const pin = new THREE.Group();
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 16), mat);
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 20), mat); cone.position.y = -0.34; cone.rotation.x = Math.PI;
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.4, 18, 14), new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.16, depthWrite: false }));
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.22, 18, 14), mat);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.42, 18), mat);
+  cone.position.y = -0.29; cone.rotation.x = Math.PI;
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), new THREE.MeshBasicMaterial({
+    color: hex, transparent: true, opacity: 0.14, depthWrite: false,
+  }));
   pin.add(ball, cone, halo); g.add(pin);
-  if (name) { const spr = labelSprite(name, hex); spr.position.set(0, 1.05, 0); g.add(spr); }
-  const ph = (name?.length ?? 3) * 0.7;
+
+  const tag = labelSprite(name, detail, hex);
+  tag.position.set(0, 1.08, 0);
+  g.add(tag);
+
+  const ph = name.length * 0.7;
   return { group: g, update(t: number) {
-    pin.position.y = 0.18 * Math.sin(t * 2 + ph) + 0.12;
-    mat.emissiveIntensity = 0.5 + 0.35 * Math.sin(t * 3 + ph);
+    pin.position.y = 0.15 * Math.sin(t * 2 + ph) + 0.1;
+    mat.emissiveIntensity = 0.48 + 0.28 * Math.sin(t * 3 + ph);
   } };
 }
-function labelSprite(text: string, hex: number): THREE.Sprite {
-  const f = 38;
-  const probe = document.createElement('canvas').getContext('2d')!;
-  probe.font = `700 ${f}px Inter, Arial`;
-  const tw = probe.measureText(text).width;
-  const cv = document.createElement('canvas'); cv.width = Math.ceil(tw + 150); cv.height = 82;
+function labelSprite(name: string, detail: string, hex: number): THREE.Sprite {
+  const cv = document.createElement('canvas');
+  cv.width = 360; cv.height = 104;
   const c = cv.getContext('2d')!;
-  c.fillStyle = 'rgba(20,30,43,0.96)';
-  roundRect(c, 2, 2, cv.width - 4, cv.height - 4, 18); c.fill();
-  c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 2;
-  roundRect(c, 3, 3, cv.width - 6, cv.height - 6, 17); c.stroke();
-  c.fillStyle = '#' + hex.toString(16).padStart(6, '0');
-  roundRect(c, 12, 12, 9, cv.height - 24, 5); c.fill();
-  c.beginPath(); c.arc(48, cv.height / 2, 11, 0, Math.PI * 2);
-  c.fillStyle = '#' + hex.toString(16).padStart(6, '0'); c.fill();
-  c.strokeStyle = 'rgba(255,255,255,0.72)'; c.lineWidth = 3; c.stroke();
-  c.fillStyle = '#f4f7fb'; c.font = `700 ${f}px Inter, Arial`;
-  c.textBaseline = 'middle'; c.fillText(text, 72, cv.height / 2 + 1);
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+
+  c.fillStyle = 'rgba(18,28,41,0.97)';
+  roundRect(c, 2, 2, 356, 100, 13); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.26)'; c.lineWidth = 2;
+  roundRect(c, 3, 3, 354, 98, 12); c.stroke();
+
+  const accent = '#' + hex.toString(16).padStart(6, '0');
+  c.fillStyle = accent;
+  roundRect(c, 10, 12, 7, 80, 3); c.fill();
+
+  c.beginPath(); c.arc(34, 34, 8, 0, Math.PI * 2);
+  c.fillStyle = accent; c.fill();
+  c.beginPath(); c.arc(34, 34, 13, 0, Math.PI * 2);
+  c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 2; c.stroke();
+
+  c.textBaseline = 'middle';
+  c.textAlign = 'left';
+  c.fillStyle = '#f7f9fc';
+  c.font = '800 25px Inter, Arial';
+  c.fillText(name.toLocaleUpperCase('pt-BR'), 56, 35, 286);
+
+  c.fillStyle = 'rgba(222,231,240,0.82)';
+  c.font = '700 15px Inter, Arial';
+  c.fillText(detail.toLocaleUpperCase('pt-BR'), 56, 73, 286);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthWrite: false, depthTest: false, toneMapped: false,
+  });
   const spr = new THREE.Sprite(material);
-  const k = 0.008; spr.scale.set(cv.width * k, cv.height * k, 1);
+  spr.renderOrder = 10;
+  const k = 0.0075;
+  spr.scale.set(cv.width * k, cv.height * k, 1);
   return spr;
 }
 

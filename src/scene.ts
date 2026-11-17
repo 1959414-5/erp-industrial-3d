@@ -11,10 +11,17 @@ import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-asset
 
 export type WallMode = 'cutaway' | 'high' | 'low';
 
-const TYPE_LABEL: Record<MachineType, string> = {
-  laser: 'Corte a laser', plasma: 'Corte a plasma', pressBrake: 'Dobradeira', cnc: 'Usinagem CNC',
-  robotWelder: 'Solda robotizada', paintBooth: 'Pintura', punchPress: 'Puncionadeira', bandSaw: 'Serra de fita',
-};
+function machineTagName(name: string): string {
+  return name
+    .replace(/^Corte a Laser/i, 'LASER')
+    .replace(/^Dobradeira(?: CNC)?/i, 'DOBRADEIRA')
+    .replace(/^Centro de Usinagem/i, 'USINAGEM')
+    .replace(/^Solda Robotizada/i, 'SOLDA')
+    .replace(/^Cabine de Pintura/i, 'PINTURA')
+    .replace(/^Puncionadeira(?: CNC)?/i, 'PUNCIONADEIRA')
+    .replace(/^Serra de Fita/i, 'SERRA')
+    .toLocaleUpperCase('pt-BR');
+}
 
 /* ── Câmeras por aba ────────────────────────────────────────────────── */
 const FOCUS: Record<TabKey, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
@@ -479,7 +486,6 @@ export class Factory {
     this.machineGroups = []; this.models = []; this.statuses = []; this.operators = []; this.machineProps = []; this.markers = [];
     const kept = this.editables.filter((e) => !/^(machine|stack|marker)-/.test(e.id));
     this.editables.splice(0, this.editables.length, ...kept);
-    const seen = new Set<MachineType>();
     const avgOee = ms.length ? ms.reduce((sum, machine) => sum + machine.oee, 0) / ms.length : 0;
     const scrapValues = ms.map((machine) => machine.scrapPct ?? 0);
     const avgScrap = scrapValues.length ? scrapValues.reduce((sum, value) => sum + value, 0) / scrapValues.length : 0;
@@ -520,12 +526,13 @@ export class Factory {
       const flagged = lowOee || highScrap;
       const color = m.status === 'down' ? 0xe5484d
         : flagged || m.status === 'idle' ? 0xf5b83d : 0x22b573;
-      const label = m.status === 'down' ? `FALHA · ${m.name}`
-        : highScrap ? `REFUGO ALTO · ${m.name}`
-          : lowOee ? `OEE ABAIXO DA MÉDIA · ${m.name}`
-            : seen.has(ty) ? null : TYPE_LABEL[ty];
-      seen.add(ty);
-      const mk = buildMarker(label, color); mk.group.position.set(mx, 4.2, mz);
+      const detail = m.status === 'down' ? `FALHA · OEE ${m.oee}%`
+        : highScrap ? `REFUGO ALTO · ${(m.scrapPct ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
+          : lowOee ? `OEE BAIXO · ${m.oee}%`
+            : m.status === 'idle' ? `PARADA · OEE ${m.oee}%`
+              : `OPERANDO · OEE ${m.oee}%`;
+      const mk = buildMarker(machineTagName(m.name), color, detail);
+      mk.group.position.set(mx, 4.2, mz);
       this.scene.add(mk.group); this.markers.push(mk);
       this.addEditable(`marker-${i}`, mk.group);
     });
@@ -622,7 +629,15 @@ export class Factory {
     this.ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera);
     let best: { d: number; s: Selection } | null = null;
     const take = (d: number, s: Selection) => { if (!best || d < best.d) best = { d, s }; };
-    const m = this.ray.intersectObjects(this.machineGroups, true)[0]; if (m) take(m.distance, { kind: 'machine', index: this.rootIndex(m.object, this.machineGroups) });
+    const m = this.ray.intersectObjects(this.machineGroups, true)[0];
+    if (m) take(m.distance, { kind: 'machine', index: this.rootIndex(m.object, this.machineGroups) });
+    // As etiquetas também são alvos clicáveis e apontam para a máquina correspondente.
+    const markerRoots = this.markers.map((marker) => marker.group);
+    const tag = this.ray.intersectObjects(markerRoots, true)[0];
+    if (tag) {
+      const index = this.rootIndex(tag.object, markerRoots);
+      if (index >= 0) take(tag.distance, { kind: 'machine', index });
+    }
     const v = this.ray.intersectObjects(this.office.sellers, true)[0]; if (v) take(v.distance, { kind: 'seller', index: this.rootIndex(v.object, this.office.sellers) });
     const l = this.lots.pick(this.ray); if (l) take(l.distance, { kind: 'lot', index: l.index });
     return (best as { d: number; s: Selection } | null)?.s ?? null;

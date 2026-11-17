@@ -36,6 +36,7 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
   const tabs = $('tabs'), left = $('left'), right = $('right'), bottom = $('bottom'), tip = $('tip'), card = $('card');
   let currentTab: TabKey = 'producao';
   let lotFilter: 'all' | 'critical' | 'low' | 'empty' = 'all';
+  let machineFilter: 'all' | 'run' | 'idle' | 'down' = 'all';
   let selected: Selection | null = null;
   let searchTerm = '';
 
@@ -58,11 +59,28 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
   function bottomFor(k: TabKey) {
     if (k === 'producao') {
       const oee = Math.round(data.machines.reduce((sum, machine) => sum + machine.oee, 0) / Math.max(1, data.machines.length));
-      const rows = data.machines.map((m, i) => ({ m, i })).filter(({ m }) => m.name.toLocaleLowerCase('pt-BR').includes(searchTerm));
+      const matched = data.machines.map((m, i) => ({ m, i }))
+        .filter(({ m }) => m.name.toLocaleLowerCase('pt-BR').includes(searchTerm));
+      const counts = {
+        run: matched.filter(({ m }) => m.status === 'run').length,
+        idle: matched.filter(({ m }) => m.status === 'idle').length,
+        down: matched.filter(({ m }) => m.status === 'down').length,
+      };
+      const filters = [
+        ['all', 'Todas', matched.length],
+        ['run', 'Operando', counts.run],
+        ['idle', 'Paradas', counts.idle],
+        ['down', 'Falhas', counts.down],
+      ] as const;
+      const rows = matched.filter(({ m }) => machineFilter === 'all' || m.status === machineFilter);
       bottom.innerHTML = `<div class="bottom-content">
-        <div class="bottom-heading"><div><span class="panel-overline">VISÃO OPERACIONAL</span><h3>Máquinas · OEE médio ${oee}%</h3></div><span class="bottom-count">${rows.length} de ${data.machines.length}</span></div>
-        <div class="chips">${rows.map(({ m, i }) =>
-          `<button class="chip" data-k="machine" data-i="${i}"><span class="dot" style="background:${M_STATUS[m.status][1]}"></span>${escapeHtml(m.name)}<b>${m.oee}%</b></button>`).join('') || '<span class="empty-filter">Nenhuma máquina encontrada.</span>'}</div>
+        <div class="bottom-heading"><div><span class="panel-overline">VISÃO OPERACIONAL</span><h3>Máquinas · OEE médio ${oee}%</h3></div><span class="bottom-count">${rows.length} de ${matched.length}</span></div>
+        <div class="machine-toolbar">
+          <div class="machine-filters" aria-label="Filtrar máquinas por situação">${filters.map(([key, label, count]) =>
+            `<button type="button" class="machine-filter ${machineFilter === key ? 'on' : ''}" data-machine-filter="${key}" aria-pressed="${machineFilter === key}">${label}<b>${count}</b></button>`).join('')}</div>
+        </div>
+        <div class="chips" aria-label="Selecione uma máquina para localizar no ambiente 3D">${rows.map(({ m, i }) =>
+          `<button class="chip" data-k="machine" data-i="${i}" title="Localizar ${escapeHtml(m.name)} no ambiente 3D"><span class="dot" style="background:${m.status === 'run' ? '#22b573' : M_STATUS[m.status][1]}"></span>${escapeHtml(m.name)}<b>${m.oee}%</b></button>`).join('') || '<span class="empty-filter">Nenhuma máquina corresponde a este filtro.</span>'}</div>
       </div>`;
     } else if (k === 'estoque') {
       const counts: Record<LotState, number> = { empty: 0, critical: 0, full: 0, medium: 0, low: 0 };
@@ -112,6 +130,12 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
 
   bottom.onclick = (e) => {
     const target = e.target as HTMLElement;
+    const machineStatusFilter = target.closest<HTMLButtonElement>('[data-machine-filter]');
+    if (machineStatusFilter) {
+      machineFilter = machineStatusFilter.dataset.machineFilter as typeof machineFilter;
+      bottomFor('producao');
+      return;
+    }
     const filter = target.closest<HTMLButtonElement>('[data-lot-filter]');
     if (filter) {
       lotFilter = filter.dataset.lotFilter as typeof lotFilter;
@@ -139,6 +163,7 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
   function select(k: TabKey) {
     currentTab = k;
     if (k !== 'estoque') lotFilter = 'all';
+    if (k !== 'producao') machineFilter = 'all';
     tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.k === k));
     const current = document.getElementById('current-module');
     const inspectorTitle = document.getElementById('inspector-title');
@@ -196,8 +221,9 @@ export function mountUi(data: Dataset, onTab: (t: TabKey) => void, onSelect: (s:
     if (selection.kind === 'machine') {
       const machine = data.machines[selection.index], [status, color] = M_STATUS[machine.status];
       return { kicker: machine.type ? TYPE_LABEL[machine.type] : 'Máquina', title: machine.name, status, color, body: row([
+        ['Identificação', machine.id.toLocaleUpperCase('pt-BR')],
         ...(machine.order ? [['Ordem atual', machine.order] as [string, string]] : []),
-        ...(machine.producedToday !== undefined ? [['Produzido no período', num(machine.producedToday) + ' un'] as [string, string]] : []),
+        ...(machine.producedToday !== undefined ? [['Produção hoje', num(machine.producedToday) + ' un'] as [string, string]] : []),
         ...(machine.scrapPct !== undefined ? [['Refugo', num(machine.scrapPct, 1) + '%'] as [string, string]] : []),
       ]) + meter('OEE estimado', machine.oee, color) };
     }
