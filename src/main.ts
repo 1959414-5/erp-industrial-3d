@@ -212,10 +212,35 @@ function startApplication(data: Dataset) {
   factory.onHover = (s, x, y) => ui.showTip(s, x, y);
   factory.onPick = (s) => ui.pin(s);
   factory.onAnchor = (x, y, v) => ui.place(x, y, v);
+  factory.onCameraTarget = (x, y) => {
+    const marker = document.getElementById('minimap-camera');
+    const core = document.getElementById('minimap-camera-core');
+    const px = (x / 100) * 208, py = (y / 100) * 144;
+    marker?.setAttribute('cx', String(px));
+    marker?.setAttribute('cy', String(py));
+    core?.setAttribute('cx', String(px));
+    core?.setAttribute('cy', String(py));
+  };
   ui.select('producao');
 
-  // assistente de IA (chat) — ver src/ai.ts
+  // assistente de IA (chat) e navegação por setores.
   let curTab: TabKey = 'producao', curSel: Selection | null = null;
+  const overviewButton = document.getElementById('overviewbtn');
+  overviewButton?.addEventListener('click', () => {
+    factory.select(null);
+    factory.focusOverview();
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-map-sector]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const sector = button.dataset.mapSector as 'producao' | 'estoque' | 'comercial' | 'expedicao';
+      const tab: TabKey = sector === 'expedicao' ? 'producao' : sector;
+      factory.select(null);
+      ui.select(tab);
+      curTab = tab;
+      curSel = null;
+      factory.focusSector(sector);
+    });
+  });
   document.getElementById('tabs')!.addEventListener('click', (e) => { const k = (e.target as HTMLElement).closest<HTMLElement>('button')?.dataset.k; if (k) curTab = k as TabKey; });
   const prevPick = factory.onPick; factory.onPick = (s) => { curSel = s; prevPick(s); };
   mountAi({ data, getContext: () => ({ tab: curTab, selected: curSel }), openTab: (t) => { ui.select(t); curTab = t; }, focus: (s) => factory.focusSelection(s) });
@@ -229,8 +254,24 @@ function startApplication(data: Dataset) {
     }
   };
   focusButton?.addEventListener('click', () => toggleFocusMode(!document.body.classList.contains('focus-mode')));
+
+  const presentationButton = document.getElementById('presentationbtn') as HTMLButtonElement | null;
+  const togglePresentation = (active: boolean) => {
+    document.body.classList.toggle('presentation-mode', active);
+    if (active) document.body.classList.remove('focus-mode');
+    if (presentationButton) {
+      presentationButton.setAttribute('aria-pressed', String(active));
+      presentationButton.classList.toggle('active', active);
+      presentationButton.textContent = active ? 'Sair da apresentação' : 'Apresentar';
+    }
+    window.setTimeout(() => window.dispatchEvent(new Event('resize')), 80);
+  };
+  presentationButton?.addEventListener('click', () => togglePresentation(!document.body.classList.contains('presentation-mode')));
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && document.body.classList.contains('focus-mode')) toggleFocusMode(false);
+    if (event.key === 'Escape') {
+      if (document.body.classList.contains('presentation-mode')) togglePresentation(false);
+      if (document.body.classList.contains('focus-mode')) toggleFocusMode(false);
+    }
   });
 
 
