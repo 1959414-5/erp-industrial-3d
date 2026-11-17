@@ -21,20 +21,23 @@ const cyl = (r: number, h: number, m: THREE.Material, x = 0, y = 0, z = 0, seg =
 };
 const sparkMesh = () => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), M.spark); s.visible = false; return s; };
 
-/** Sinalização em grafite, cinza e laranja: operando, parada e falha. */
+/** Torre de sinalização industrial: verde = operando, âmbar = parada, vermelho = falha. */
 function stackLight(g: THREE.Group, x: number, y: number, z: number) {
-  g.add(cyl(0.04, 0.5, M.dark, x, y, z, 10));
-  const colors = [0xe96b2c, 0x9aa1aa, 0x303b49];
-  const mats = colors.map((c) => new THREE.MeshStandardMaterial({
-    color: c,
-    emissive: c === 0x303b49 ? 0xe96b2c : c,
-    emissiveIntensity: 0.04,
+  g.add(cyl(0.045, 0.5, M.dark, x, y, z, 10));
+  const colors = [0x22b573, 0xf5b83d, 0xe5484d];
+  const mats = colors.map((color) => new THREE.MeshStandardMaterial({
+    color,
+    emissive: color,
+    emissiveIntensity: 0.035,
+    roughness: 0.32,
+    metalness: 0.08,
   }));
-  mats.forEach((m, i) => g.add(cyl(0.11, 0.13, m, x, y + 0.5 + i * 0.14, z, 16)));
+  // Lentes compactas e reaproveitadas por geometria; só a intensidade varia por estado.
+  mats.forEach((material, i) => g.add(cyl(0.11, 0.13, material, x, y + 0.5 + i * 0.14, z, 16)));
   return (s: Status, t: number) => {
-    mats[0].emissiveIntensity = s === 'run' ? 1.35 : 0.04;
-    mats[1].emissiveIntensity = s === 'idle' ? 0.8 : 0.04;
-    mats[2].emissiveIntensity = s === 'down' ? (Math.sin(t * 8) > 0 ? 1.55 : 0.12) : 0.04;
+    mats[0].emissiveIntensity = s === 'run' ? 1.2 : 0.035;
+    mats[1].emissiveIntensity = s === 'idle' ? 0.95 : 0.035;
+    mats[2].emissiveIntensity = s === 'down' ? (Math.sin(t * 8) > 0 ? 1.65 : 0.08) : 0.035;
   };
 }
 
