@@ -92,6 +92,31 @@
         </div>
         <div class="viewport-stage" id="viewport-stage">
           <canvas id="scene"></canvas>
+          <div id="scene-tools" class="scene-tools" aria-label="Controles de navegação da fábrica">
+            <button id="overviewbtn" type="button" title="Enquadrar a fábrica inteira">Visão geral</button>
+            <button id="presentationbtn" type="button" aria-pressed="false" title="Abrir modo apresentação">Apresentar</button>
+          </div>
+          <section id="factory-minimap" class="factory-minimap" aria-label="Mapa interativo da planta">
+            <div class="minimap-heading"><span>MAPA DA PLANTA</span><small>CLIQUE EM UM SETOR</small></div>
+            <div class="minimap-plan">
+              <svg viewBox="0 0 208 144" role="img" aria-label="Planta simplificada com setores operacionais">
+                <rect x="3" y="3" width="202" height="138" rx="7" class="minimap-outline"/>
+                <rect x="26" y="38" width="106" height="48" rx="3" class="minimap-production"/>
+                <rect x="140" y="4" width="64" height="88" rx="3" class="minimap-stock"/>
+                <rect x="8" y="102" width="46" height="37" rx="3" class="minimap-shipping"/>
+                <rect x="115" y="94" width="87" height="45" rx="3" class="minimap-commercial"/>
+                <path d="M7 96 H205 M135 5 V94 M58 99 V140" class="minimap-road"/>
+                <path d="M7 96 H205 M135 5 V94 M58 99 V140" class="minimap-road-center"/>
+                <circle id="minimap-camera" cx="104" cy="72" r="5.5" class="minimap-camera"/>
+                <circle id="minimap-camera-core" cx="104" cy="72" r="2" class="minimap-camera-core"/>
+              </svg>
+              <button type="button" data-map-sector="producao" class="minimap-zone minimap-zone-production" aria-label="Ir para Produção">PRODUÇÃO</button>
+              <button type="button" data-map-sector="estoque" class="minimap-zone minimap-zone-stock" aria-label="Ir para Estoque">ESTOQUE</button>
+              <button type="button" data-map-sector="expedicao" class="minimap-zone minimap-zone-shipping" aria-label="Ir para Expedição">EXPEDIÇÃO</button>
+              <button type="button" data-map-sector="comercial" class="minimap-zone minimap-zone-commercial" aria-label="Ir para Comercial">COMERCIAL</button>
+            </div>
+            <div class="minimap-foot"><i></i> Centro da câmera</div>
+          </section>
           <div id="wallctl" class="glass">
             <span>Visualização</span>
             <button data-wall="cutaway" class="on">Corte</button>
