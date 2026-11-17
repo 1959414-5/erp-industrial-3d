@@ -5,7 +5,7 @@ import { buildMachine, type MachineModel } from './machines';
 import { SheetLots } from './stock';
 import { buildOffice } from './office';
 import { buildWorker, buildForklift, buildExpedition, buildSheetStack, buildMarker, buildRack,
-  buildRoamer, buildWarehousePicker, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
+  buildRoamer, buildWarehousePicker, buildDockCrew, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
 import { buildFloor } from './floor';
 import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
 
@@ -784,30 +784,53 @@ export class Factory {
     return { total, sample };
   }
 
-  /** Caminhão animado: chega pela rua (pista de entrada), encosta na doca, espera (carrega) e
-   *  sai pela MESMA via x da doca, mas pela pista de saída (z diferente) — nunca cruza de frente
-   *  outro veículo que esteja entrando. */
+  /** Caminhão com equipe sincronizada: encosta, abre o baú, recebe caixas e libera a doca. */
   private buildAnimTruck(inPath: [number, number][], outPath: [number, number][], speed: number, offset: number): Prop {
     const g = new THREE.Group();
     const truck = buildTruck(); g.add(truck);
     const inS = Factory.pathSampler(inPath);
     const outS = Factory.pathSampler(outPath);
-    const driveIn = inS.total / speed, park = 12, driveOut = outS.total / speed, idle = 10;
+    const driveIn = inS.total / speed, park = 15, driveOut = outS.total / speed, idle = 11;
     const T = driveIn + park + driveOut + idle;
+    const dockPosition = inS.sample(1);
+    const side: -1 | 1 = dockPosition.x < -36.5 ? -1 : 1;
+    const crew = buildDockCrew(Math.round(Math.abs(dockPosition.x) * 2), side);
+    crew.group.position.set(dockPosition.x + side * 1.68, 0, 20.15);
+    crew.group.rotation.y = side < 0 ? 0 : Math.PI;
+    this.scene.add(crew.group);
+
+    const rearDoors = truck.getObjectByName('truck-rear-doors');
+    const leftDoor = rearDoors?.getObjectByName('rear-left-door');
+    const rightDoor = rearDoors?.getObjectByName('rear-right-door');
+    const smooth = (v: number) => { const x = Math.max(0, Math.min(1, v)); return x * x * (3 - 2 * x); };
+
     return { group: g, update(t: number) {
       const tt = (((t + offset) % T) + T) % T;
-      if (tt < driveIn) {                             // aproxima em marcha a ré, baú voltado à doca
+      if (tt < driveIn) {                             // aproxima em marcha a ré, equipe aguarda em pé
         truck.visible = true;
         const s = inS.sample(tt / driveIn); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang + Math.PI;
-      } else if (tt < driveIn + park) {              // permanece alinhado no portão para carga/descarga
+        crew.setActivity('ready', 0);
+        if (leftDoor) leftDoor.rotation.y = 0;
+        if (rightDoor) rightDoor.rotation.y = 0;
+      } else if (tt < driveIn + park) {              // abre o baú e transfere caixas para o caminhão
         truck.visible = true;
         const s = inS.sample(1); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang + Math.PI;
-      } else if (tt < driveIn + park + driveOut) {   // sai para a frente, sem girar no ponto de doca
+        const elapsed = tt - driveIn;
+        crew.setActivity('loading', elapsed / park);
+        const opening = smooth(elapsed / 1.15) * smooth((park - elapsed) / 0.95);
+        if (leftDoor) leftDoor.rotation.y = -1.12 * opening;
+        if (rightDoor) rightDoor.rotation.y = 1.12 * opening;
+      } else if (tt < driveIn + park + driveOut) {   // fecha portas e segue para a via de saída
         truck.visible = true;
         const s = outS.sample((tt - driveIn - park) / driveOut); g.position.set(s.x, 0, s.z); g.rotation.y = s.ang;
-      } else {                                        // fora de cena
+        crew.setActivity('ready', 0);
+        if (leftDoor) leftDoor.rotation.y = 0;
+        if (rightDoor) rightDoor.rotation.y = 0;
+      } else {                                        // caminhão fora de cena: operador descansa sentado
         truck.visible = false;
+        crew.setActivity('resting', 0);
       }
+      crew.update(t);
     }};
   }
 

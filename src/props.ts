@@ -72,6 +72,105 @@ export function buildWorker(seed = 0): Prop {
   } };
 }
 
+export interface DockCrew extends Prop {
+  setActivity(mode: 'ready' | 'loading' | 'resting', progress: number): void;
+}
+
+/** Equipe cenográfica da doca: separa caixas durante a carga e descansa sentada entre caminhões.
+ *  Não escreve no estoque nem altera qualquer dado de operação. */
+export function buildDockCrew(seed = 0, side: -1 | 1 = 1): DockCrew {
+  const group = new THREE.Group();
+  const standing = buildWorker(seed);
+  standing.group.scale.setScalar(0.88);
+  group.add(standing.group);
+
+  const chair = new THREE.Group();
+  chair.add(buildWaitChair(0x34475c));
+  chair.scale.setScalar(0.94);
+  chair.position.set(side * 1.72, 0, 0.02);
+  group.add(chair);
+
+  // Figura sentada, alinhada ao assento e com os pés no piso.
+  const resting = new THREE.Group();
+  const shirt = std(seed % 2 ? 0xe96b2c : 0x66788c, 0.78, 0);
+  const skin = std(SKINS[Math.floor(hash(seed + 1) * SKINS.length)], 0.82, 0);
+  const pants = std(0x2b3550, 0.82), boots = std(0x1a2236, 0.72);
+  resting.add(
+    b(0.38, 0.52, 0.24, shirt, 0, 0.68, 0.10),
+    b(0.12, 0.16, 0.15, skin, -0.12, 0.98, 0.08),
+    b(0.12, 0.16, 0.15, skin, 0.12, 0.98, 0.08),
+  );
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), skin);
+  head.position.set(0, 1.38, 0.11); resting.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.56), std(0x382b25, 0.9));
+  hair.position.set(0, 1.4, 0.11); resting.add(hair);
+  for (const sx of [-1, 1]) {
+    // coxas apontam para a frente da cadeira; pernas descem até o piso
+    resting.add(
+      b(0.15, 0.14, 0.43, pants, sx * 0.11, 0.43, -0.17),
+      b(0.13, 0.34, 0.14, pants, sx * 0.11, 0.08, -0.44),
+      b(0.16, 0.09, 0.24, boots, sx * 0.11, 0.0, -0.48),
+      b(0.09, 0.38, 0.11, shirt, sx * 0.25, 0.78, -0.02),
+    );
+  }
+  resting.position.copy(chair.position);
+  resting.position.y = 0;
+  resting.rotation.y = 0;
+  group.add(resting);
+
+  const staging = buildPallet(false);
+  staging.scale.set(0.9, 0.88, 0.9);
+  staging.position.set(side * 0.98, 0.08, -0.62);
+  group.add(staging);
+
+  const packageMaterial = std(0xc99c67, 0.88, 0);
+  const tapeMaterial = std(0x5b6876, 0.75, 0.02);
+  const packages: THREE.Group[] = [];
+  for (let i = 0; i < 3; i++) {
+    const parcel = new THREE.Group();
+    parcel.add(
+      b(0.48, 0.38, 0.42, packageMaterial, 0, 0, 0),
+      b(0.045, 0.012, 0.43, tapeMaterial, 0, 0.375, 0),
+      b(0.012, 0.39, 0.43, tapeMaterial, 0, 0, 0),
+    );
+    parcel.visible = false;
+    group.add(parcel);
+    packages.push(parcel);
+  }
+
+  let activity: 'ready' | 'loading' | 'resting' = 'resting';
+  let loadProgress = 0;
+  const setActivity = (mode: 'ready' | 'loading' | 'resting', progress: number) => {
+    activity = mode;
+    loadProgress = Math.max(0, Math.min(1, progress));
+    standing.group.visible = mode !== 'resting';
+    resting.visible = mode === 'resting';
+    staging.visible = mode !== 'resting';
+    packages.forEach((parcel) => { parcel.visible = mode === 'loading'; });
+  };
+  setActivity('resting', 0);
+
+  return {
+    group,
+    setActivity,
+    update(t: number) {
+      if (activity !== 'resting') standing.update(t);
+      if (activity !== 'loading') return;
+      // Três caixas entram no baú em sequência durante o período de doca.
+      packages.forEach((parcel, index) => {
+        const p = loadProgress * 3.0 - index * 0.92;
+        if (p < 0 || p > 1) { parcel.visible = false; return; }
+        parcel.visible = true;
+        const eased = p * p * (3 - 2 * p);
+        const from = new THREE.Vector3(side * 0.98, 0.78 + index * 0.04, -0.58);
+        const to = new THREE.Vector3(-side * 1.32, 0.84, 1.85);
+        parcel.position.lerpVectors(from, to, eased);
+        parcel.rotation.y = side * -0.05;
+      });
+    },
+  };
+}
+
 /** Palete de madeira com caixas/carga embalada. */
 export function buildPallet(wrap = false): THREE.Group {
   const g = new THREE.Group();
@@ -233,6 +332,70 @@ export function buildExpedition(): THREE.Group {
   for (const [x, z, w] of spots) {
     const p = buildPallet(w); p.scale.setScalar(0.82); p.position.set(x, 0.77, z); g.add(p);
   }
+
+  // DEPÓSITO AUXILIAR DE EXPEDIÇÃO — anexo lateral, independente do estoque de chapas.
+  // Frente aberta para o pátio, com estrutura superior aparente para não esconder o interior.
+  const depotX = 8.25;
+  const depotFloor = std(0xcbd2d9, 0.86), depotWall = std(0xf2f4f6, 0.88);
+  const depotFrame = std(0x526171, 0.5, 0.45), depotShelf = std(0x394454, 0.58, 0.2);
+  const depotBoxA = std(0xc49a68, 0.9), depotBoxB = std(0xd8b782, 0.9);
+  g.add(b(4.8, 0.12, 5.35, depotFloor, depotX, 0, 0.65));
+  // paredes laterais e fundo
+  g.add(
+    b(0.16, 3.45, 5.25, depotWall, 5.82, 0.12, 0.65),
+    b(0.16, 3.45, 5.25, depotWall, 10.68, 0.12, 0.65),
+    b(4.86, 3.45, 0.16, depotWall, depotX, 0.12, -1.98),
+  );
+  // moldura do vão frontal, mantendo a entrada livre para carrinhos e paletes
+  g.add(
+    b(1.25, 3.0, 0.16, depotWall, 6.45, 0.12, 3.28),
+    b(1.25, 3.0, 0.16, depotWall, 10.05, 0.12, 3.28),
+    b(2.35, 0.32, 0.18, depotWall, depotX, 2.92, 3.28),
+    b(0.12, 3.12, 0.12, depotFrame, 7.02, 0.12, 3.34),
+    b(0.12, 3.12, 0.12, depotFrame, 9.48, 0.12, 3.34),
+  );
+  // vigas de topo, sem telhado maciço para manter o conteúdo visível na câmera 3D
+  g.add(
+    b(5.0, 0.14, 0.16, depotFrame, depotX, 3.55, -1.96),
+    b(0.16, 0.14, 5.35, depotFrame, 5.82, 3.55, 0.65),
+    b(0.16, 0.14, 5.35, depotFrame, 10.68, 3.55, 0.65),
+  );
+  // persiana recolhida acima do vão de acesso
+  for (let i = 0; i < 5; i++) {
+    g.add(b(2.25, 0.045, 0.035, depotFrame, depotX, 3.0 + i * 0.07, 3.16));
+  }
+  const depotSign = signBoard('DEPÓSITO');
+  depotSign.position.set(depotX, 3.9, 3.38);
+  g.add(depotSign);
+
+  // estantes internas leves com caixas, filme stretch e consumíveis cenográficos
+  for (let level = 0; level < 3; level++) {
+    const y = 0.65 + level * 0.92;
+    g.add(
+      b(2.75, 0.075, 0.78, depotShelf, 9.48, y, -1.12),
+      b(0.08, 0.88, 0.82, depotFrame, 8.12, y - 0.02, -1.12),
+      b(0.08, 0.88, 0.82, depotFrame, 10.84, y - 0.02, -1.12),
+    );
+    for (let bay = 0; bay < 3; bay++) {
+      const x = 8.55 + bay * 0.88;
+      const boxMaterial = (level + bay) % 2 ? depotBoxA : depotBoxB;
+      g.add(b(0.72, 0.48, 0.65, boxMaterial, x, y + 0.08, -1.12));
+      g.add(b(0.08, 0.012, 0.66, depotFrame, x, y + 0.42, -1.12));
+    }
+  }
+  // palete e caixas de apoio próximos à entrada, fora da faixa de circulação
+  const depotPallet = buildPallet(false);
+  depotPallet.scale.set(0.95, 0.9, 0.95);
+  depotPallet.position.set(7.0, 0.12, 1.5);
+  g.add(depotPallet);
+  const depotRoll = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.32, 0.56, 18),
+    std(0xbfcbd5, 0.62, 0.04),
+  );
+  depotRoll.rotation.z = Math.PI / 2;
+  depotRoll.position.set(9.45, 0.52, 1.55);
+  g.add(depotRoll);
+  g.add(b(0.62, 0.08, 0.62, depotFrame, 9.45, 0.12, 1.55));
 
   // caminhão removido daqui — agora é animado externamente (scene.ts)
 
@@ -577,6 +740,26 @@ export function buildTruck(): THREE.Group {
   const red = std(0xd7262c, 0.5, 0.2), boxBody = std(0xeef2f8, 0.6), chassis = std(0x24303f, 0.6), tyre = std(0x15202e, 0.7), glass = std(0x7fa8d9, 0.2, 0.3);
   t.add(b(2.5, 2.3, 4.2, boxBody, 0, 0.9, -0.6));
   t.add(b(2.52, 0.2, 4.22, red, 0, 2.15, -0.6));
+  // Portas traseiras articuladas; são abertas durante a carga da doca.
+  const rearDoors = new THREE.Group();
+  rearDoors.name = 'truck-rear-doors';
+  const leftDoor = new THREE.Group(); leftDoor.name = 'rear-left-door';
+  leftDoor.position.set(-1.23, 0.92, -2.74);
+  const rightDoor = new THREE.Group(); rightDoor.name = 'rear-right-door';
+  rightDoor.position.set(1.23, 0.92, -2.74);
+  const leftPanel = new THREE.Mesh(new THREE.BoxGeometry(1.22, 1.95, 0.065), boxBody);
+  leftPanel.position.set(0.61, 0.98, 0); leftDoor.add(leftPanel);
+  const rightPanel = new THREE.Mesh(new THREE.BoxGeometry(1.22, 1.95, 0.065), boxBody);
+  rightPanel.position.set(-0.61, 0.98, 0); rightDoor.add(rightPanel);
+  for (const doorGroup of [leftDoor, rightDoor]) {
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.62, 0.035), chassis);
+    handle.position.set(doorGroup === leftDoor ? 1.12 : -1.12, 0.98, 0.045);
+    doorGroup.add(handle);
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.025, 1.92, 0.025), red);
+    seam.position.set(doorGroup === leftDoor ? 1.2 : -1.2, 0.98, 0.045);
+    doorGroup.add(seam);
+  }
+  rearDoors.add(leftDoor, rightDoor); t.add(rearDoors);
   t.add(b(2.5, 2.0, 1.4, red, 0, 0.9, 2.3));
   t.add(b(2.2, 0.9, 0.08, glass, 0, 1.6, 3.02));
   t.add(b(2.6, 0.5, 5.8, chassis, 0, 0.35, 0.2));
