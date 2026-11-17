@@ -257,6 +257,20 @@ export class Factory {
       this.props.push(tk); this.scene.add(tk.group);
     }
 
+    // Empilhadeira de expedição: acesso central independente dos caminhões.
+    // Transporta um palete pela rampa interna, deposita na área de staging e retorna vazia.
+    const dispatchForklift = buildForklift({
+      path: [[-36.5, 26.55], [-36.5, 22.55], [-36.5, 20.22], [-36.5, 17.5]],
+      elevation: [0.375, 0.375, 0.06, 0.06],
+      speed: 1.25,
+      carry: true,
+      transfer: true,
+      offset: 8,
+      modelScale: 0.82,
+    });
+    this.props.push(dispatchForklift);
+    this.scene.add(dispatchForklift.group);
+
     // ── CLIENTES: carro → estacionamento → escritório (loop) ─────
     // Cada carro tem sua PRÓPRIA faixa dentro do conector de clientes (x=-15..-9), e a pista
     // de entrada (z=48.5) nunca é a mesma linha da pista de saída (z=51) — elimina colisão
