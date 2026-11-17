@@ -60,6 +60,7 @@ export class Factory {
   private selected: Selection | null = null;
   private hover: Selection | null = null;
   private ringSel = ring(0xf26a1b, 0.95);
+  private ringSelHalo = ring(0xf26a1b, 0.16);
   private ringHover = ring(0x3b82f6, 0.55);
   private move: PointerEvent | null = null;
   private cameraDragging = false;
@@ -94,7 +95,7 @@ export class Factory {
       this.cameraDragging = false;
       this.move = null;
     });
-    this.buildLights(); this.buildWorld(); this.scene.add(this.ringSel, this.ringHover);
+    this.buildLights(); this.buildWorld(); this.scene.add(this.ringSelHalo, this.ringSel, this.ringHover);
     addEventListener('resize', () => this.resize());
     if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
       const observer = new ResizeObserver(() => this.resize());
@@ -115,13 +116,13 @@ export class Factory {
   }
 
   private buildLights() {
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 0.98;
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xc4cbd4, 1.05));
-    const sun = new THREE.DirectionalLight(0xfff7f0, 1.45); sun.position.set(-30, 52, 36); sun.castShadow = true;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.02;
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xb8c2ce, 1.08));
+    const sun = new THREE.DirectionalLight(0xfff7f0, 1.38); sun.position.set(-30, 52, 36); sun.castShadow = true;
     // 2048² mantém sombras definidas com custo de GPU bem menor que 4096².
     sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -64, right: 64, top: 50, bottom: -50, near: 1, far: 200 });
     sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.035; sun.shadow.radius = 3.5; this.scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xe7ebf0, 0.35); fill.position.set(32, 28, -22); this.scene.add(fill);
+    const fill = new THREE.DirectionalLight(0xe7edf5, 0.42); fill.position.set(32, 28, -22); this.scene.add(fill);
   }
 
   setWallMode(mode: WallMode) {
@@ -609,8 +610,20 @@ export class Factory {
     return { c: w.clone().add(new THREE.Vector3(0, 0, 0.45)), a: 1.2, b: 1.5, anchor: w.clone().add(new THREE.Vector3(0, 2.0, 0.95)) };
   }
   private place(r: THREE.Mesh, s: Selection | null) {
-    if (!s) { r.visible = false; return; }
-    const f = this.foot(s); r.position.set(f.c.x, 0.04, f.c.z); r.scale.set(f.a, f.b, 1); r.visible = true;
+    if (!s) {
+      r.visible = false;
+      if (r === this.ringSel) this.ringSelHalo.visible = false;
+      return;
+    }
+    const f = this.foot(s);
+    r.position.set(f.c.x, 0.04, f.c.z);
+    r.scale.set(f.a, f.b, 1);
+    r.visible = true;
+    if (r === this.ringSel) {
+      this.ringSelHalo.position.copy(r.position);
+      this.ringSelHalo.scale.set(f.a * 1.12, f.b * 1.12, 1);
+      this.ringSelHalo.visible = true;
+    }
   }
 
   private resize() {
@@ -677,7 +690,8 @@ export class Factory {
       const inFront = projected.z >= -1 && projected.z <= 1;
       const insideFrame = projected.x >= -1 && projected.x <= 1 && projected.y >= -1 && projected.y <= 1;
       this.onAnchor(x, y, inFront && insideFrame);
-      this.ringSel.material.opacity = 0.7 + 0.25 * Math.sin(t * 4);
+      this.ringSel.material.opacity = 0.76 + 0.18 * Math.sin(t * 3.2);
+      this.ringSelHalo.material.opacity = 0.12 + 0.06 * Math.sin(t * 2.1);
     }
     this.controls.update(); this.renderer.render(this.scene, this.camera);
   }
