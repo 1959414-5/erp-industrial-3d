@@ -22,6 +22,15 @@ const FOCUS: Record<TabKey, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   estoque:  { pos: new THREE.Vector3(34.25, 25, 24), target: new THREE.Vector3(34.25, 1.0, -3) },
   comercial:{ pos: new THREE.Vector3(27.25, 25, 33.5), target: new THREE.Vector3(27.25, 0.5, 20.5) },
 };
+const OVERVIEW = {
+  pos: new THREE.Vector3(0, 150, 180),
+  target: new THREE.Vector3(0, 0.5, 0),
+};
+const EXPEDITION_FOCUS = {
+  pos: new THREE.Vector3(-51, 25, 46),
+  target: new THREE.Vector3(-36.5, 0.5, 24.5),
+};
+export type FactorySector = TabKey | 'expedicao';
 const mat = (color: number, rough = 0.85) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.05 });
 function box(w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -69,6 +78,7 @@ export class Factory {
   onHover: (s: Selection | null, x: number, y: number) => void = () => {};
   onPick: (s: Selection | null) => void = () => {};
   onAnchor: (x: number, y: number, visible: boolean) => void = () => {};
+  onCameraTarget: (x: number, y: number) => void = () => {};
 
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -78,7 +88,7 @@ export class Factory {
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.camera.position.copy(FOCUS.producao.pos);
     this.controls = new OrbitControls(this.camera, canvas);
-    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, enablePan: true, screenSpacePanning: true, panSpeed: 0.9, minDistance: 14, maxDistance: 180, maxPolarAngle: Math.PI * 0.49 });
+    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, enablePan: true, screenSpacePanning: true, panSpeed: 0.9, minDistance: 14, maxDistance: 250, maxPolarAngle: Math.PI * 0.49 });
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN };
     addEventListener('keydown', (e) => { if (e.key === 'Control') this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN; });
     addEventListener('keyup', (e) => { if (e.key === 'Control') this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; });
@@ -510,6 +520,18 @@ export class Factory {
   }
   setOccupancy(values: number[], states: string[] = []) { this.lots.setOccupancy(values, states); }
   focus(tab: TabKey) { this.goal = { pos: FOCUS[tab].pos.clone(), target: FOCUS[tab].target.clone() }; }
+  focusSector(sector: FactorySector) {
+    const view = sector === 'expedicao' ? EXPEDITION_FOCUS : FOCUS[sector];
+    this.goal = { pos: view.pos.clone(), target: view.target.clone() };
+  }
+  focusOverview() {
+    this.goal = { pos: OVERVIEW.pos.clone(), target: OVERVIEW.target.clone() };
+  }
+  private notifyCameraTarget() {
+    const x = Math.max(0, Math.min(100, ((this.controls.target.x + 52) / 104) * 100));
+    const y = Math.max(0, Math.min(100, ((this.controls.target.z + 36) / 72) * 100));
+    this.onCameraTarget(x, y);
+  }
 
   /** Seleciona e leva a câmera até o objeto (usado pelo assistente de IA). */
   focusSelection(sel: Selection) {
@@ -667,9 +689,12 @@ export class Factory {
       this.canvas.style.cursor = h ? 'pointer' : 'grab'; this.onHover(h, e.clientX, e.clientY);
     }
     if (this.goal) {
-      // Transição mais responsiva: reduz a sensação de atraso ao trocar de módulo.
-      this.camera.position.lerp(this.goal.pos, 0.19); this.controls.target.lerp(this.goal.target, 0.19);
-      if (this.camera.position.distanceTo(this.goal.pos) < 0.05) this.goal = null;
+      // Suavização exponencial independente da taxa de quadros.
+      const cameraEase = 1 - Math.exp(-8.5 * dt);
+      this.camera.position.lerp(this.goal.pos, cameraEase);
+      this.controls.target.lerp(this.goal.target, cameraEase);
+      if (this.camera.position.distanceTo(this.goal.pos) < 0.07
+        && this.controls.target.distanceTo(this.goal.target) < 0.05) this.goal = null;
     }
     if (this.wallMode === 'cutaway') this.updateCutaway();
     this.cartons.forEach((c, i) => { c.position.x = ((t * 1.6 + i * 2.5) % 30) - 20; });
@@ -693,6 +718,8 @@ export class Factory {
       this.ringSel.material.opacity = 0.76 + 0.18 * Math.sin(t * 3.2);
       this.ringSelHalo.material.opacity = 0.12 + 0.06 * Math.sin(t * 2.1);
     }
-    this.controls.update(); this.renderer.render(this.scene, this.camera);
+    this.controls.update();
+    this.notifyCameraTarget();
+    this.renderer.render(this.scene, this.camera);
   }
 }
