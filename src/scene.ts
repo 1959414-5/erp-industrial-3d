@@ -262,15 +262,17 @@ export class Factory {
     const separationPickPallet = buildPallet(true);
     separationPickPallet.name = 'separation-route-pick-pallet';
     separationPickPallet.scale.set(0.82, 0.84, 0.82);
-    separationPickPallet.position.set(28.0, 0.06, -22.4);
+    separationPickPallet.position.set(28.42, 0.06, -21.72);
     this.scene.add(separationPickPallet);
     const dispatchReturnPallet = exp.getObjectByName('dispatch-return-pallet');
+    if (dispatchReturnPallet) dispatchReturnPallet.position.set(0.77, 0.08, -8.04);
 
     const dispatchForklift = buildForklift({
       // Sai pelo portão lateral oeste, usa o corredor externo em volta da Produção,
       // contorna pelo lado norte e entra no corredor de acesso à fileira SEPARAÇÃO.
       // A volta é feita pelo mesmo caminho, agora levando a caixa.
       path: [
+        [-36.5, 16.75],
         [-40.5, 18.25],
         [-43.5, 18.25],
         [-46.5, 18.25],
@@ -282,7 +284,7 @@ export class Factory {
         [25.5, -26.5],
         [28.0, -22.4],
       ],
-      elevation: [0.14, 0.14, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      elevation: [0.14, 0.14, 0.14, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
       speed: 4.6,
       carry: true,
       transfer: true,
@@ -769,7 +771,7 @@ export class Factory {
   setOccupancy(values: number[], states: string[] = []) { this.lots.setOccupancy(values, states); }
   setSellers(sellers: Seller[]) {
     this.office.setSellerNames(sellers.map((seller) => seller.name));
-    // Os dois visitantes que chegam de carro recebem os nomes de clientes já presentes no Dataset.
+    // Os visitantes permanecem sem identificação nominal no ambiente 3D.
     this.customers.forEach((customer) => customer.setLabel?.(''));
   }
   focus(tab: TabKey) { this.goal = { pos: FOCUS[tab].pos.clone(), target: FOCUS[tab].target.clone() }; }
