@@ -53,7 +53,14 @@ export function mountAi(host: AiHost) {
   const panel = document.createElement('section');
   panel.id = 'ai'; panel.className = 'glass'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Assistente de IA');
   panel.innerHTML = `
-    <div class="ai-head"><div><b>✨ Assistente IA</b><small id="ai-mode">verificando…</small></div><button class="x" aria-label="Fechar">×</button></div>
+    <div class="ai-head">
+      <div class="ai-head-brand">
+        <span class="ai-head-icon" aria-hidden="true">✦</span>
+        <div><b>Assistente Inteligente</b><small id="ai-mode">verificando…</small></div>
+      </div>
+      <div class="ai-head-tools"><span class="ai-head-label">INDUSTRIAL AI</span><button class="x" aria-label="Fechar">×</button></div>
+    </div>
+    <div class="ai-statusline"><i></i><span>Monitoramento operacional</span><b id="ai-alert-total">Calculando alertas</b></div>
     <div class="ai-body" id="ai-body" aria-live="polite"></div>
     <div class="ai-chips" id="ai-chips"></div>
     <div class="ai-models" id="ai-models" role="menu" aria-label="Modelos de IA" hidden></div>
@@ -61,11 +68,23 @@ export function mountAi(host: AiHost) {
   root.appendChild(panel);
   const body = panel.querySelector<HTMLDivElement>('#ai-body')!, chips = panel.querySelector<HTMLDivElement>('#ai-chips')!;
   const input = panel.querySelector<HTMLInputElement>('#ai-input')!, form = panel.querySelector<HTMLFormElement>('.ai-form')!, modeEl = panel.querySelector<HTMLElement>('#ai-mode')!;
+  const alertTotal = panel.querySelector<HTMLElement>('#ai-alert-total')!;
+  const launchCount = btn.querySelector<HTMLElement>('#ai-alert-count');
   const mbtn = panel.querySelector<HTMLButtonElement>('#ai-mbtn')!, mpop = panel.querySelector<HTMLDivElement>('#ai-models')!;
 
   const api = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
   let llm = false, model = '', label = 'Claude', busy = false, greeted = false; const history: Turn[] = [];
   let pick: Pick | null = loadPick(); let info: ModelsInfo | null = null; let lastReply: AiReply | undefined; const asked: string[] = []; let aiChips: string[] | null = null;
+  const activeAlerts = buildInsights(host.data).filter((item) => item.severity === 'critical' || item.severity === 'warn').length;
+  const paintAlertCount = () => {
+    const value = activeAlerts > 0 ? `${activeAlerts} ${activeAlerts === 1 ? 'alerta' : 'alertas'}` : 'Sem alertas críticos';
+    if (launchCount) launchCount.textContent = value;
+    alertTotal.textContent = activeAlerts > 0 ? value : 'Operação estável';
+    btn.setAttribute('aria-label', activeAlerts > 0
+      ? `Abrir assistente de IA. ${value} identificados.`
+      : 'Abrir assistente de IA. Sem alertas críticos ou avisos.');
+  };
+  paintAlertCount();
 
   // detecta se o backend tem chave da Anthropic configurada (tenta de novo ao abrir o painel se a 1ª tentativa falhar)
   let detected = false;
