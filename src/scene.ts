@@ -183,9 +183,9 @@ export class Factory {
     const stkRack2 = new THREE.Group(); stkRack2.add(buildRack(13.2)); stkRack2.position.set(27.0, 0, -18.5); this.scene.add(stkRack2);
     const stkRack3 = new THREE.Group(); stkRack3.add(buildRack(13.5)); stkRack3.position.set(43.5, 0, -18.5); this.scene.add(stkRack3);
     this.addEditable('rack-stock-1', stkRack1); this.addEditable('rack-stock-2', stkRack2); this.addEditable('rack-stock-3', stkRack3);
-    void this.replaceRackModules(stkRack1, 'palletRack', 4, 3.2, 3.2);
-    void this.replaceRackModules(stkRack2, 'palletRack', 4, 3.15, 3.2);
-    void this.replaceRackModules(stkRack3, 'palletRack', 4, 3.2, 3.2);
+    void this.replaceRackModules(stkRack1, 'palletRack', 4, 3.2, 3.2, 'EMBALAGENS');
+    void this.replaceRackModules(stkRack2, 'palletRack', 4, 3.15, 3.2, 'CONSUMÍVEIS');
+    void this.replaceRackModules(stkRack3, 'palletRack', 4, 3.2, 3.2, 'ACESSÓRIOS');
 
     // ── MATÉRIA-PRIMA — estantes para chapas ──────────────────────
     const rawA = new THREE.Group(); rawA.add(buildRack(14)); rawA.position.set(-26, 0, -16); this.scene.add(rawA);
@@ -436,17 +436,158 @@ export class Factory {
     }
   }
 
-  /** Carrega um conjunto de módulos GLB dentro do mesmo root de layout/edição. */
-  private async replaceRackModules(root: THREE.Group, key: 'palletRack' | 'sheetRack', count: number, spacing: number, targetHeight: number) {
+  /** Cria cargas apenas decorativas para os porta-paletes auxiliares.
+   *  Não recebe Dataset, não altera SheetLots e não grava movimentos ou quantidades. */
+  private addAuxiliaryRackLoads(
+    root: THREE.Group,
+    modules: THREE.Group[],
+    count: number,
+    spacing: number,
+    targetHeight: number,
+    category: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS',
+  ) {
+    type LoadKind = 'carton' | 'bin' | 'wrapped' | 'roll';
+    type LoadItem = { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number; rotation: number };
+    const items: Record<LoadKind, LoadItem[]> = { carton: [], bin: [], wrapped: [], roll: [] };
+
+    // Detecta as alturas reais das longarinas/decks no GLB. Em caso de modelo sem
+    // malhas separadas, usa três níveis conservadores compatíveis com o rack local.
+    const levelCandidates: number[] = [];
+    root.updateMatrixWorld(true);
+    modules.forEach((module) => {
+      module.updateMatrixWorld(true);
+      module.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const bounds = new THREE.Box3().setFromObject(mesh);
+        const size = bounds.getSize(new THREE.Vector3());
+        if (size.y <= 0.17 && size.x >= spacing * 0.52 &&
+            bounds.max.y > 0.22 && bounds.max.y < targetHeight - 0.08) {
+          levelCandidates.push(bounds.max.y);
+        }
+      });
+    });
+
+    levelCandidates.sort((a, b) => a - b);
+    const clustered: number[] = [];
+    for (const y of levelCandidates) {
+      const last = clustered[clustered.length - 1];
+      if (last === undefined || Math.abs(y - last) > 0.18) clustered.push(y);
+      else clustered[clustered.length - 1] = (last + y) / 2;
+    }
+    let shelfTops = clustered.filter((y) => y > 0.28 && y < targetHeight - 0.08);
+    if (shelfTops.length > 3) {
+      shelfTops = [shelfTops[0], shelfTops[Math.floor((shelfTops.length - 1) / 2)], shelfTops[shelfTops.length - 1]];
+    }
+    if (shelfTops.length < 2) shelfTops = [0.62, 1.68, 2.68];
+
+    const addItem = (
+      kind: LoadKind, x: number, shelfTop: number, z: number,
+      sx: number, sy: number, sz: number, color: number, rotation = 0,
+    ) => items[kind].push({ x, y: shelfTop + sy / 2 + 0.035, z, sx, sy, sz, color, rotation });
+
+    for (let bay = 0; bay < count; bay++) {
+      const centerX = (bay - (count - 1) / 2) * spacing;
+      const offsets = [-0.56, 0.56];
+      shelfTops.forEach((shelfTop, level) => {
+        const nextTop = shelfTops[level + 1] ?? targetHeight;
+        const clearHeight = Math.max(0.34, nextTop - shelfTop - 0.12);
+        const boxHeight = Math.min(0.46, clearHeight * 0.68);
+        const lowX = centerX + offsets[0];
+        const highX = centerX + offsets[1];
+
+        if (category === 'EMBALAGENS') {
+          addItem('carton', lowX, shelfTop, 0, 0.96, boxHeight, 0.72, bay % 2 ? 0xc89a62 : 0xd4aa76);
+          addItem(level === 1 && bay % 2 === 0 ? 'wrapped' : 'carton', highX, shelfTop, 0,
+            0.96, boxHeight, 0.72, level === 1 && bay % 2 === 0 ? 0xbfc9d2 : 0xc99a63);
+        } else if (category === 'CONSUMÍVEIS') {
+          if (level === 0 || (level === 2 && bay % 2 === 0)) {
+            addItem('roll', lowX, shelfTop, 0, 0.42, Math.min(0.52, clearHeight * 0.72), 0.42, 0xd9e0e6);
+            addItem('roll', highX, shelfTop, 0, 0.42, Math.min(0.52, clearHeight * 0.72), 0.42, 0xc5d0d9);
+          } else {
+            addItem('bin', lowX, shelfTop, 0, 0.92, boxHeight, 0.72, 0x647b91);
+            addItem('wrapped', highX, shelfTop, 0, 0.96, boxHeight, 0.72, 0xc5ced7);
+          }
+        } else {
+          addItem('bin', lowX, shelfTop, 0, 0.94, boxHeight, 0.72, bay % 2 ? 0x657f91 : 0x748b9a);
+          addItem(level === 1 ? 'wrapped' : 'bin', highX, shelfTop, 0,
+            0.94, boxHeight, 0.72, level === 1 ? 0xc6cfd7 : 0x718999);
+        }
+      });
+    }
+
+    const loadGroup = new THREE.Group();
+    loadGroup.name = 'auxiliary-stock-visual-only';
+    const dummy = new THREE.Object3D();
+    const configs: { kind: LoadKind; geometry: THREE.BufferGeometry; roughness: number; metalness: number }[] = [
+      { kind: 'carton', geometry: new THREE.BoxGeometry(1, 1, 1), roughness: 0.88, metalness: 0 },
+      { kind: 'bin', geometry: new THREE.BoxGeometry(1, 1, 1), roughness: 0.62, metalness: 0.04 },
+      { kind: 'wrapped', geometry: new THREE.BoxGeometry(1, 1, 1), roughness: 0.48, metalness: 0.04 },
+      { kind: 'roll', geometry: new THREE.CylinderGeometry(0.5, 0.5, 1, 16), roughness: 0.56, metalness: 0.02 },
+    ];
+    for (const config of configs) {
+      const data = items[config.kind];
+      if (!data.length) continue;
+      const mesh = new THREE.InstancedMesh(
+        config.geometry,
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: config.roughness, metalness: config.metalness }),
+        data.length,
+      );
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      data.forEach((item, index) => {
+        dummy.position.set(item.x, item.y, item.z);
+        dummy.rotation.set(0, item.rotation, 0);
+        dummy.scale.set(item.sx, item.sy, item.sz);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(index, dummy.matrix);
+        mesh.setColorAt(index, new THREE.Color(item.color));
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      loadGroup.add(mesh);
+    }
+    root.add(loadGroup);
+
+    // Placa identifica o uso auxiliar destas estantes sem confundir com o estoque de chapas.
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 112;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#1d2a39'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e96b2c'; ctx.fillRect(0, 0, 12, canvas.height);
+    ctx.fillStyle = '#f7f9fc'; ctx.font = '700 45px "IBM Plex Sans", Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(category, 270, 58, 450);
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.35, 0.52),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true, toneMapped: false }),
+    );
+    sign.position.set(-spacing * (count - 1) / 2, targetHeight + 0.22, 0.64);
+    root.add(sign);
+  }
+
+  /** Carrega módulos GLB e preenche somente os racks auxiliares com itens cenográficos. */
+  private async replaceRackModules(
+    root: THREE.Group,
+    key: 'palletRack' | 'sheetRack',
+    count: number,
+    spacing: number,
+    targetHeight: number,
+    auxiliaryCategory?: 'EMBALAGENS' | 'CONSUMÍVEIS' | 'ACESSÓRIOS',
+  ) {
     try {
       const asset = await loadIndustrialAsset(key);
       if (!root.parent) return;
       this.fitImportedModel(asset.scene, spacing * 0.94, targetHeight);
       root.clear();
+      const modules: THREE.Group[] = [];
       for (let i = 0; i < count; i++) {
         const module = asset.scene.clone(true);
         module.position.x = (i - (count - 1) / 2) * spacing;
         root.add(module);
+        modules.push(module);
+      }
+      if (key === 'palletRack' && auxiliaryCategory) {
+        this.addAuxiliaryRackLoads(root, modules, count, spacing, targetHeight, auxiliaryCategory);
       }
     } catch (error) {
       console.warn(`Não foi possível carregar a estante GLB ${key}; mantendo a estante local.`, error);
