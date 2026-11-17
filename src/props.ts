@@ -209,17 +209,27 @@ export function buildMarker(name: string | null, hex: number): Prop {
   } };
 }
 function labelSprite(text: string, hex: number): THREE.Sprite {
-  const f = 46; const probe = document.createElement('canvas').getContext('2d')!;
-  probe.font = `bold ${f}px Inter, Arial`; const tw = probe.measureText(text).width;
-  const cv = document.createElement('canvas'); cv.width = tw + 120; cv.height = f + 44;
+  const f = 38;
+  const probe = document.createElement('canvas').getContext('2d')!;
+  probe.font = `700 ${f}px Inter, Arial`;
+  const tw = probe.measureText(text).width;
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(tw + 150); cv.height = 82;
   const c = cv.getContext('2d')!;
-  c.fillStyle = 'rgba(255,255,255,0.96)'; roundRect(c, 1, 1, cv.width - 2, cv.height - 2, cv.height / 2); c.fill();
-  c.strokeStyle = 'rgba(31,42,68,0.10)'; c.lineWidth = 2; c.stroke();
-  c.fillStyle = '#' + hex.toString(16).padStart(6, '0'); c.beginPath(); c.arc(42, cv.height / 2, 14, 0, Math.PI * 2); c.fill();
-  c.fillStyle = '#1f2a44'; c.font = `bold ${f}px Inter, Arial`; c.textBaseline = 'middle'; c.fillText(text, 70, cv.height / 2 + 2);
+  c.fillStyle = 'rgba(20,30,43,0.96)';
+  roundRect(c, 2, 2, cv.width - 4, cv.height - 4, 18); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 2;
+  roundRect(c, 3, 3, cv.width - 6, cv.height - 6, 17); c.stroke();
+  c.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+  roundRect(c, 12, 12, 9, cv.height - 24, 5); c.fill();
+  c.beginPath(); c.arc(48, cv.height / 2, 11, 0, Math.PI * 2);
+  c.fillStyle = '#' + hex.toString(16).padStart(6, '0'); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.72)'; c.lineWidth = 3; c.stroke();
+  c.fillStyle = '#f4f7fb'; c.font = `700 ${f}px Inter, Arial`;
+  c.textBaseline = 'middle'; c.fillText(text, 72, cv.height / 2 + 1);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-  const k = 0.0072; spr.scale.set(cv.width * k, cv.height * k, 1);
+  const material = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+  const spr = new THREE.Sprite(material);
+  const k = 0.008; spr.scale.set(cv.width * k, cv.height * k, 1);
   return spr;
 }
 
