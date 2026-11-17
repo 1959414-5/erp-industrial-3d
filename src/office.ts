@@ -35,8 +35,9 @@ function woodFloorTexture(): THREE.CanvasTexture {
   cv.width = 512; cv.height = 512;
   const c = cv.getContext('2d')!;
   const rowH = 512 / 6;
-  const plankPalette = ['#d6bd9a', '#cdb28c', '#ddc6a4', '#c7ad88', '#d9c09a', '#cfb48d'];
-  c.fillStyle = '#927557'; c.fillRect(0, 0, 512, 512);
+  // Carvalho natural extra claro: fundo marfim, sem a aparência amarronzada do piso anterior.
+  const plankPalette = ['#eee5d5', '#e9dfcc', '#f3eadb', '#e6dcc9', '#f0e7d8', '#ebe1d0'];
+  c.fillStyle = '#d6cbb9'; c.fillRect(0, 0, 512, 512);
 
   for (let row = 0; row < 6; row++) {
     const y = row * rowH;
@@ -47,18 +48,18 @@ function woodFloorTexture(): THREE.CanvasTexture {
     // Veios longos, muito suaves, para sugerir madeira sem criar ruído visual.
     for (let grain = 0; grain < 8; grain++) {
       const gy = y + 10 + grain * 9;
-      c.strokeStyle = grain % 2 ? 'rgba(255,255,255,.13)' : 'rgba(105,78,48,.075)';
+      c.strokeStyle = grain % 2 ? 'rgba(255,255,255,.22)' : 'rgba(120,105,82,.035)';
       c.lineWidth = grain % 3 === 0 ? 2 : 1;
       c.beginPath(); c.moveTo(8, gy);
       c.bezierCurveTo(135, gy - 3, 260, gy + 4, 504, gy - 1); c.stroke();
     }
 
     // Junta transversal alternada entre fileiras (paginação desencontrada).
-    c.fillStyle = '#927557';
-    c.fillRect(joint - 2, y + 2, 3, rowH - 4);
-    c.fillStyle = 'rgba(255,255,255,.25)';
+    c.fillStyle = '#d6cbb9';
+    c.fillRect(joint - 1, y + 2, 2, rowH - 4);
+    c.fillStyle = 'rgba(255,255,255,.48)';
     c.fillRect(joint + 1, y + 4, 1, rowH - 8);
-    c.strokeStyle = 'rgba(115,83,51,.12)';
+    c.strokeStyle = 'rgba(130,116,95,.075)';
     c.lineWidth = 1;
     c.strokeRect(3, y + 3, 505, rowH - 6);
   }
@@ -75,21 +76,22 @@ function woodFloorTexture(): THREE.CanvasTexture {
 function wallpaperTexture(): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
   const c = cv.getContext('2d')!;
-  c.fillStyle = '#eee7db'; c.fillRect(0, 0, 256, 256);
+  // Branco quente quase neutro: parede limpa, sem o amarelado/bege anterior.
+  c.fillStyle = '#fbfbf9'; c.fillRect(0, 0, 256, 256);
 
   // Trama de linho muito sutil.
   for (let y = 0; y < 256; y += 4) {
-    c.strokeStyle = y % 8 === 0 ? 'rgba(120,101,78,.045)' : 'rgba(255,255,255,.18)';
+    c.strokeStyle = y % 8 === 0 ? 'rgba(130,139,145,.028)' : 'rgba(255,255,255,.32)';
     c.lineWidth = 1; c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(256, y + 0.5); c.stroke();
   }
   for (let x = 0; x < 256; x += 8) {
-    c.strokeStyle = x % 32 === 0 ? 'rgba(155,128,96,.10)' : 'rgba(155,128,96,.035)';
+    c.strokeStyle = x % 32 === 0 ? 'rgba(145,153,157,.045)' : 'rgba(145,153,157,.018)';
     c.lineWidth = x % 32 === 0 ? 1.2 : 0.7;
     c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, 256); c.stroke();
   }
 
   // Linhas decorativas orgânicas, quase imperceptíveis, evitando um padrão excessivo.
-  c.strokeStyle = 'rgba(174,145,111,.07)'; c.lineWidth = 1.1;
+  c.strokeStyle = 'rgba(165,171,172,.025)'; c.lineWidth = 1.1;
   for (let x = 18; x < 256; x += 64) {
     c.beginPath(); c.moveTo(x, 12); c.bezierCurveTo(x + 5, 72, x - 4, 166, x + 2, 244); c.stroke();
   }
@@ -382,7 +384,7 @@ export function buildOffice() {
   group.add(b(OW, 0.12, OD, std(0x9b8a76, 0.95), 0, 0, 0));
   const floorSurface = new THREE.Mesh(
     new THREE.PlaneGeometry(OW, OD),
-    new THREE.MeshStandardMaterial({ map: woodFloorTexture(), roughness: 0.84, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ map: woodFloorTexture(), color: 0xffffff, roughness: 0.9, metalness: 0 }),
   );
   floorSurface.rotation.x = -Math.PI / 2;
   floorSurface.position.y = 0.124;
@@ -391,7 +393,7 @@ export function buildOffice() {
 
   // ── vidros e paredes ──────────────────────────────────────────
   const glassW = new THREE.MeshStandardMaterial({ color: 0xcbd0d6, transparent: true, opacity: 0.38, depthWrite: false });
-  const solidW = std(0xe2e8f0, 0.7);
+  const solidW = std(0xf6f7f7, 0.78);
   const aluFrame = std(0x18181b, 0.35, 0.65);
 
   const WH = 4.0; // altura das paredes do escritório
@@ -470,10 +472,10 @@ export function buildOffice() {
 
   // Tapetes delimitam somente áreas de permanência, deixando o piso amadeirado visível.
   group.add(
-    b(7.3, 0.018, 7.1, std(0xd8cdbd, 0.98), -17.25, 0.12, 5.0),
+    b(7.3, 0.018, 7.1, std(0xeeeae3, 0.99), -17.25, 0.12, 5.0),
     // Tapete da copa acompanha o novo eixo de 90° do conjunto de descanso.
-    b(4.7, 0.022, 7.5, std(0xcfc4b3, 0.98), -2.0, 0.12, 5.8),
-    b(11.8, 0.018, 8.7, std(0xd8dce0, 0.98), 15, 0.12, 0),
+    b(4.7, 0.022, 7.5, std(0xe9e5de, 0.99), -2.0, 0.12, 5.8),
+    b(11.8, 0.018, 8.7, std(0xf0f1ef, 0.99), 15, 0.12, 0),
   );
 
   // Plantas com folhagem verde em todos os setores; a posição da recepção fica livre para o café.
