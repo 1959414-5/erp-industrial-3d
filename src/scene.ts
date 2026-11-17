@@ -627,17 +627,27 @@ export class Factory {
     // Em visão geral, a fábrica inteira fica visível. Reduzimos a resolução de
     // renderização e suspendemos o passe de sombras, que é o custo mais alto nesse enquadramento.
     const cameraDistance = this.camera.position.distanceTo(this.controls.target);
-    const targetPixelRatio = cameraDistance > 85 ? Math.min(devicePixelRatio, 0.7)
-      : cameraDistance > 38 ? Math.min(devicePixelRatio, 0.9)
-        : Math.min(devicePixelRatio, 1.15);
+    // Durante gestos e transições de câmera, prioriza fluidez sobre nitidez.
+    // A resolução volta ao nível normal assim que a navegação termina.
+    const cameraNavigating = this.cameraDragging || this.goal !== null;
+    const targetPixelRatio = cameraNavigating ? Math.min(devicePixelRatio, 0.68)
+      : cameraDistance > 85 ? Math.min(devicePixelRatio, 0.7)
+        : cameraDistance > 38 ? Math.min(devicePixelRatio, 0.9)
+          : Math.min(devicePixelRatio, 1.15);
     if (Math.abs(targetPixelRatio - this.currentPixelRatio) > 0.05) {
       this.currentPixelRatio = targetPixelRatio;
       this.renderer.setPixelRatio(targetPixelRatio);
       const rect = this.canvas.parentElement?.getBoundingClientRect() ?? this.canvas.getBoundingClientRect();
       this.renderer.setSize(Math.max(1, Math.round(rect.width)), Math.max(1, Math.round(rect.height)), false);
     }
-    const overviewMode = cameraDistance > 40;
-    if (this.shadowMode !== !overviewMode) { this.shadowMode = !overviewMode; this.renderer.shadowMap.enabled = this.shadowMode; }
+    // Sombras são o passe mais caro da cena. Não as calcula durante gestos
+    // nem enquanto a câmera está interpolando para Produção/Estoque/Comercial.
+    const enableShadows = cameraDistance <= 40 && !cameraNavigating;
+    if (this.shadowMode !== enableShadows) {
+      this.shadowMode = enableShadows;
+      this.renderer.shadowMap.enabled = enableShadows;
+      if (enableShadows) this.renderer.shadowMap.needsUpdate = true;
+    }
     if (this.move && !this.cameraDragging) {
       const e = this.move; this.move = null; const h = this.hit(e);
       if (!same(h, this.hover)) { this.hover = h; this.place(this.ringHover, same(h, this.selected) ? null : h); }
