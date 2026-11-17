@@ -236,11 +236,11 @@ function labelSprite(name: string, detail: string, hex: number): THREE.Sprite {
   c.textBaseline = 'middle';
   c.textAlign = 'left';
   c.fillStyle = '#f7f9fc';
-  c.font = '800 25px Inter, Arial';
+  c.font = '800 25px "IBM Plex Sans", Arial';
   c.fillText(name.toLocaleUpperCase('pt-BR'), 56, 35, 286);
 
   c.fillStyle = 'rgba(222,231,240,0.82)';
-  c.font = '700 15px Inter, Arial';
+  c.font = '700 15px "IBM Plex Sans", Arial';
   c.fillText(detail.toLocaleUpperCase('pt-BR'), 56, 73, 286);
 
   const tex = new THREE.CanvasTexture(cv);
@@ -330,7 +330,7 @@ export function buildSectorSign(text: string, hex = 0x1f2a44): THREE.Group {
   c.fillStyle = '#' + hex.toString(16).padStart(6, '0');
   roundRect(c, 12, 13, 12, 94, 6); c.fill();
   c.fillStyle = 'rgba(255,255,255,0.94)';
-  c.font = '800 34px Inter, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '800 34px "IBM Plex Sans", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, 224, 62, 360);
 
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
@@ -623,7 +623,7 @@ function signBoard(text: string): THREE.Mesh {
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 72; const c = cv.getContext('2d')!;
   c.fillStyle = '#1f2a44'; roundRect(c, 0, 0, 320, 72, 12); c.fill();
   c.fillStyle = '#f26a1b'; c.fillRect(0, 60, 320, 12);
-  c.fillStyle = '#fff'; c.font = 'bold 40px Inter, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#fff'; c.font = 'bold 40px "IBM Plex Sans", Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, 160, 32);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.76), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
