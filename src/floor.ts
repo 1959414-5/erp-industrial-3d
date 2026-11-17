@@ -102,9 +102,8 @@ export function buildFloor(): THREE.Mesh {
   hazard(19.5, -14.5, 48.5, 8.5);   // grade de paletes do estoque
   hazard(-48, 15, -25, 34);          // expedição
 
-  // faixa verde de pedestre (lateral esquerda)
-  // Continuidade da faixa verde lateral até a entrada da Expedição (limite z=14.5).
-  const pedestrianLaneEnd = 14.5;
+  // Faixa verde lateral termina exatamente no cone de segurança do acesso à Expedição.
+  const pedestrianLaneEnd = 33.0;
   g.fillStyle = 'rgba(34,181,115,.32)';
   g.fillRect(X(-51), Z(-34), S(3), Z(pedestrianLaneEnd) - Z(-34));
   g.strokeStyle = '#fff'; g.lineWidth = 8; g.setLineDash([26, 20]);

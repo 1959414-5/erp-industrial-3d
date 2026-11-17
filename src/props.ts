@@ -198,6 +198,7 @@ export function buildForklift(route: {
   offset?: number;
   modelScale?: number;
   sourcePallet?: THREE.Object3D;
+  destinationPallet?: THREE.Object3D;
   pickupDuration?: number;
   dropDuration?: number;
 }): Prop {
@@ -346,6 +347,11 @@ export function buildForklift(route: {
         if (route.sourcePallet) {
           route.sourcePallet.visible =
             mode === 'to-separation' ||
+            (mode === 'pickup' && phaseTime < pickupHalf);
+        }
+        if (route.destinationPallet) {
+          route.destinationPallet.visible =
+            mode === 'to-separation' ||
             (mode === 'pickup' && phaseTime < pickupHalf) ||
             (mode === 'drop' && phaseTime >= dropHalf);
         }
@@ -438,32 +444,7 @@ export function buildExpedition(): THREE.Group {
   // Placa superior central da expedição.
   const sign = signBoard('EXPEDIÇÃO'); sign.position.set(0, 3.72, -1.7); g.add(sign);
 
-  // Rampa interna longa e suave: desce do piso da doca até o piso do depósito.
-  const innerRampGeometry = new THREE.BufferGeometry();
-  innerRampGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
-    -1.02, 0.375, -2.12,   1.02, 0.375, -2.12,
-    -1.02, 0.06, -5.18,    1.02, 0.06, -5.18,
-    -1.02, 0.06, -2.12,    1.02, 0.06, -2.12,
-    -1.02, 0.06, -5.18,    1.02, 0.06, -5.18,
-  ], 3));
-  innerRampGeometry.setIndex([
-    0, 1, 2, 1, 3, 2,
-    4, 6, 5, 5, 6, 7,
-    0, 2, 6, 0, 6, 4,
-    1, 5, 7, 1, 7, 3,
-    0, 4, 5, 0, 5, 1,
-    2, 3, 7, 2, 7, 6,
-  ]);
-  innerRampGeometry.computeVertexNormals();
-  const innerRamp = new THREE.Mesh(innerRampGeometry, dock);
-  innerRamp.receiveShadow = true; innerRamp.castShadow = true; g.add(innerRamp);
-  // Guias laterais baixas com faixa amarela de segurança.
-  for (const x of [-1.02, 1.02]) {
-    g.add(
-      b(0.06, 0.12, 3.06, frame, x, 0.12, -3.65),
-      b(0.07, 0.018, 3.06, paint, x, 0.22, -3.65),
-    );
-  }
+  // O acesso interno central fica livre; a empilhadeira usa a rampa lateral oeste.
 
   // Plataforma de doca rebaixada: o piso do baú fica quase nivelado com a doca.
   g.add(b(11, 0.75, 4.25, dock, 0, 0, 0.08));
@@ -519,16 +500,46 @@ export function buildExpedition(): THREE.Group {
 
   // Paredes laterais e fundo dentro do limite da área industrial, sem avançar sobre pedestres.
   g.add(
-    b(0.18, 1.25, 7.35, depotWall, -7.1, 0.12, -5.675),
+    // Parede oeste dividida para criar a saída lateral da empilhadeira.
+    b(0.18, 1.25, 1.6, depotWall, -7.1, 0.12, -8.55),
+    b(0.18, 1.25, 3.0, depotWall, -7.1, 0.12, -3.5),
+    // Parede leste e fundo preservados.
     b(0.18, 1.25, 7.35, depotWall, 7.1, 0.12, -5.675),
     b(14.2, 1.25, 0.18, depotWall, 0, 0.12, -9.35),
   );
 
-  // Somente quatro pilares de canto. Sem colunas no meio do galpão e sem vigas superiores.
+  // Pilares externos e batentes da saída oeste. Sem vigas superiores ou pilares no corredor.
   for (const x of [-7.0, 7.0]) {
+    g.add(b(0.18, 3.65, 0.18, depotFrame, x, 0.12, -9.21));
+    if (x > 0) g.add(b(0.16, 3.65, 0.16, depotFrame, x, 0.12, -2.42));
+  }
+  for (const z of [-7.75, -5.0]) {
+    g.add(b(0.18, 1.35, 0.18, depotFrame, -7.1, 0.12, z));
+  }
+  // Rampa externa oeste: do piso interno do depósito até o pátio, sem tocar na faixa verde.
+  const westRampGeometry = new THREE.BufferGeometry();
+  westRampGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    -7.0, 0.14, -7.55,   -7.0, 0.14, -4.95,
+    -10.3, 0.0, -7.55,   -10.3, 0.0, -4.95,
+    -7.0, 0.0, -7.55,    -7.0, 0.0, -4.95,
+    -10.3, 0.0, -7.55,  -10.3, 0.0, -4.95,
+  ], 3));
+  westRampGeometry.setIndex([
+    0, 2, 1, 1, 2, 3,
+    4, 5, 6, 5, 7, 6,
+    0, 4, 6, 0, 6, 2,
+    1, 3, 7, 1, 7, 5,
+    0, 1, 5, 0, 5, 4,
+    2, 6, 7, 2, 7, 3,
+  ]);
+  westRampGeometry.computeVertexNormals();
+  const westRamp = new THREE.Mesh(westRampGeometry, dock);
+  westRamp.receiveShadow = true; westRamp.castShadow = true; g.add(westRamp);
+  // Bordas amarelas baixas delimitam a rampa.
+  for (const z of [-7.55, -4.95]) {
     g.add(
-      b(0.18, 3.65, 0.18, depotFrame, x, 0.12, -9.21),
-      b(0.16, 3.65, 0.16, depotFrame, x, 0.12, -2.42),
+      b(3.3, 0.08, 0.07, frame, -8.65, 0.04, z),
+      b(3.3, 0.018, 0.075, paint, -8.65, 0.12, z),
     );
   }
 
@@ -571,7 +582,7 @@ export function buildExpedition(): THREE.Group {
   ];
   for (const [x, z, wrapped] of stagingPositions) {
     const pallet = buildPallet(wrapped);
-    pallet.name = x === 0 ? 'dispatch-separation-pick-pallet' : 'dispatch-separation-pallet';
+    pallet.name = x === 0 ? 'dispatch-return-pallet' : 'dispatch-ready-pallet';
     pallet.scale.set(0.82, 0.84, 0.82);
     pallet.position.set(x, 0.08, z);
     g.add(pallet);

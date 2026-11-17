@@ -4,7 +4,7 @@ import type { Machine, MachineType, Selection, Seller, TabKey } from './data';
 import { buildMachine, type MachineModel } from './machines';
 import { SheetLots } from './stock';
 import { buildOffice } from './office';
-import { buildWorker, buildForklift, buildExpedition, buildSheetStack, buildMarker, buildRack,
+import { buildWorker, buildForklift, buildExpedition, buildPallet, buildSheetStack, buildMarker, buildRack,
   buildRoamer, buildWarehousePicker, buildDockCrew, buildSectorSign, buildTruck, buildYard, buildCustomer, buildCar, type Prop } from './props';
 import { buildFloor } from './floor';
 import { loadIndustrialAsset, type IndustrialAssetKey } from './industrial-assets';
@@ -257,18 +257,37 @@ export class Factory {
       this.props.push(tk); this.scene.add(tk.group);
     }
 
-    // Empilhadeira de expedição: acesso central independente dos caminhões.
-    // Transporta um palete pela rampa interna, deposita na área de staging e retorna vazia.
-    const separationPickPallet = exp.getObjectByName('dispatch-separation-pick-pallet');
+    // Palete cenográfico de coleta junto à fileira SEPARAÇÃO do estoque auxiliar.
+    // A carga não é ligada aos lotes de chapas nem modifica quantidades reais.
+    const separationPickPallet = buildPallet(true);
+    separationPickPallet.name = 'separation-route-pick-pallet';
+    separationPickPallet.scale.set(0.82, 0.84, 0.82);
+    separationPickPallet.position.set(28.0, 0.06, -22.4);
+    this.scene.add(separationPickPallet);
+    const dispatchReturnPallet = exp.getObjectByName('dispatch-return-pallet');
+
     const dispatchForklift = buildForklift({
-      // Sai do piso da doca, cruza o vão central livre, desce a rampa interna
-      // e para diante do palete central da área SEPARAÇÃO.
-      path: [[-36.5, 26.15], [-36.5, 22.38], [-36.5, 19.35], [-36.5, 17.75]],
-      elevation: [0.375, 0.375, 0.06, 0.06],
-      speed: 1.45,
+      // Sai pelo portão lateral oeste, usa o corredor externo em volta da Produção,
+      // contorna pelo lado norte e entra no corredor de acesso à fileira SEPARAÇÃO.
+      // A volta é feita pelo mesmo caminho, agora levando a caixa.
+      path: [
+        [-40.5, 18.25],
+        [-43.5, 18.25],
+        [-46.5, 18.25],
+        [-46.5, 10.0],
+        [-46.5, -23.0],
+        [-46.5, -29.5],
+        [18.5, -29.5],
+        [18.5, -26.5],
+        [25.5, -26.5],
+        [28.0, -22.4],
+      ],
+      elevation: [0.14, 0.14, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      speed: 4.6,
       carry: true,
       transfer: true,
       sourcePallet: separationPickPallet,
+      destinationPallet: dispatchReturnPallet,
       pickupDuration: 2.8,
       dropDuration: 2.0,
       offset: 4,
@@ -285,11 +304,11 @@ export class Factory {
     // (lado +z), lado a lado, voltados para o balcão. Entram pela porta (mundo x=5,5 z=17) e sobem até lá.
     const counterA: [number, number] = [11.5, 15], counterB: [number, number] = [13.5, 15];
     const customers: Parameters<typeof buildCustomer>[0][] = [
-      { carColor: 0x2563c9, seed: 21, offset: 0,
+      { carColor: 0x24282e, seed: 21, offset: 0,
         approach: [[63, 48.5], [-14, 48.5], [-14, 36], [-14, 33], [-13, 24]], stallAng: Math.PI * 0.5,
         walk: [[-12.5, 23], [-5, 20], [5.5, 17], [11.5, 16.3], counterA],
         depart: [[-13, 24], [-14, 33], [-14, 36], [-14, 51], [63, 51]] },
-      { carColor: 0xd7262c, seed: 34, offset: 19,
+      { carColor: 0xe7e9ec, seed: 34, offset: 19,
         approach: [[63, 48.5], [-10, 48.5], [-10, 36], [-10, 33], [-10.5, 24]], stallAng: Math.PI * 0.5,
         walk: [[-10, 23], [-5, 20], [5.5, 17], [13.5, 16.3], counterB],
         depart: [[-10.5, 24], [-10, 33], [-10, 36], [-10, 51], [63, 51]] },
@@ -344,11 +363,11 @@ export class Factory {
     }
 
     // ── carros estacionados no parking (nas vagas corretas) ─────
-    const parkColors = [0x9ca3af, 0x1d4ed8, 0x15803d, 0x7c3aed, 0xdc2626, 0xf59e0b];
-    // fileira de cima (z≈18.5, virados para norte) e fileira de baixo (z≈30.5, virados para sul)
+    const parkColors = [0x202329, 0x7b828b, 0xf0f1f2, 0x343940, 0xb9bec5];
+    // Fileira de cima e fileira de baixo. A vaga central inferior fica livre.
     const parkSpots: [number, number, number][] = [
-      [-19, 18.5, 0],  [-15, 18.5, 0],  [-7, 18.5, 0],     // fileira de cima
-      [-19, 30.5, Math.PI], [-11, 30.5, Math.PI], [-7, 30.5, Math.PI],  // fileira de baixo
+      [-19, 18.5, 0],  [-15, 18.5, 0],  [-7, 18.5, 0],
+      [-19, 30.5, Math.PI], [-7, 30.5, Math.PI],
     ];
     for (let i = 0; i < parkSpots.length; i++) {
       const [px, pz, ry] = parkSpots[i];
@@ -751,7 +770,7 @@ export class Factory {
   setSellers(sellers: Seller[]) {
     this.office.setSellerNames(sellers.map((seller) => seller.name));
     // Os dois visitantes que chegam de carro recebem os nomes de clientes já presentes no Dataset.
-    this.customers.forEach((customer, index) => customer.setLabel?.(sellers[index]?.topClient ?? 'Cliente'));
+    this.customers.forEach((customer) => customer.setLabel?.(''));
   }
   focus(tab: TabKey) { this.goal = { pos: FOCUS[tab].pos.clone(), target: FOCUS[tab].target.clone() }; }
   focusSector(sector: FactorySector) {
