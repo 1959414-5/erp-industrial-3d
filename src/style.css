@@ -993,3 +993,85 @@ body.focus-mode #ai{right:16px}
 #card.is-below{transform:translate(-50%,0)}
 #card{max-width:min(250px,calc(100% - 16px));pointer-events:auto}
 #card h4{overflow-wrap:anywhere}
+
+
+/* Fase 2: navegação espacial e apresentação da planta */
+.scene-tools{
+  position:absolute;right:12px;top:12px;z-index:5;
+  display:flex;align-items:center;gap:6px;pointer-events:auto;
+}
+.scene-tools button{
+  min-height:30px;padding:0 11px;border:1px solid rgba(255,255,255,.82);
+  border-radius:6px;background:rgba(255,255,255,.88);color:#394454;
+  box-shadow:0 3px 12px rgba(25,38,54,.10);backdrop-filter:blur(12px);
+  font:700 8px Inter,sans-serif;letter-spacing:.035em;cursor:pointer;
+  transition:background .18s ease,color .18s ease,border-color .18s ease;
+}
+.scene-tools button:hover,.scene-tools button.active{
+  border-color:#303b49;background:#303b49;color:#fff;
+}
+.factory-minimap{
+  position:absolute;right:12px;bottom:48px;z-index:4;width:224px;
+  padding:9px;border:1px solid rgba(255,255,255,.88);border-radius:9px;
+  background:rgba(249,250,251,.91);box-shadow:0 8px 24px rgba(25,38,54,.13);
+  backdrop-filter:blur(14px);pointer-events:auto;
+}
+.minimap-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 1px 7px}
+.minimap-heading span{color:#354151;font-size:7px;font-weight:850;letter-spacing:.12em}
+.minimap-heading small{color:#929aa4;font-size:6px;font-weight:700;letter-spacing:.06em}
+.minimap-plan{position:relative;width:100%;aspect-ratio:208/144;overflow:hidden;border-radius:5px;background:#e4e8ed}
+.minimap-plan svg{position:absolute;inset:0;width:100%;height:100%}
+.minimap-outline{fill:#f1f3f6;stroke:#aeb7c2;stroke-width:1.3}
+.minimap-production{fill:rgba(59,130,246,.17);stroke:rgba(59,130,246,.72);stroke-width:1.3}
+.minimap-stock{fill:rgba(217,139,38,.17);stroke:rgba(217,139,38,.78);stroke-width:1.3}
+.minimap-shipping{fill:rgba(34,181,115,.17);stroke:rgba(34,145,105,.76);stroke-width:1.3}
+.minimap-commercial{fill:rgba(124,92,252,.13);stroke:rgba(124,92,252,.68);stroke-width:1.3}
+.minimap-road{fill:none;stroke:rgba(47,58,73,.22);stroke-width:7}
+.minimap-road-center{fill:none;stroke:#e2b63d;stroke-width:2.2;stroke-dasharray:4 3}
+.minimap-camera{fill:rgba(242,106,27,.22);stroke:#e96b2c;stroke-width:2}
+.minimap-camera-core{fill:#e96b2c;stroke:#fff;stroke-width:1}
+.minimap-zone{
+  position:absolute;display:flex;align-items:center;justify-content:center;
+  padding:2px;border:1px solid rgba(255,255,255,.58);border-radius:4px;
+  background:rgba(255,255,255,.38);color:#455161;
+  font:800 6px Inter,sans-serif;letter-spacing:.04em;cursor:pointer;
+  transition:background .16s ease,color .16s ease,transform .16s ease;
+}
+.minimap-zone:hover,.minimap-zone:focus-visible{
+  background:rgba(48,59,73,.92);color:#fff;outline:1px solid #fff;outline-offset:-2px;
+}
+.minimap-zone-production{left:12.5%;top:25%;width:51%;height:37%}
+.minimap-zone-stock{left:67%;top:3%;width:31%;height:61%}
+.minimap-zone-shipping{left:3.5%;top:71%;width:24%;height:26%}
+.minimap-zone-commercial{left:54%;top:66%;width:44%;height:31%}
+.minimap-foot{display:flex;align-items:center;gap:6px;margin:7px 1px 0;color:#89929d;font-size:6.5px}
+.minimap-foot i{width:7px;height:7px;border:2px solid #e96b2c;border-radius:50%;background:rgba(242,106,27,.2)}
+body.presentation-mode .app-topbar,
+body.presentation-mode .app-sidebar,
+body.presentation-mode .app-inspector,
+body.presentation-mode .workspace-heading,
+body.presentation-mode .viewport-frame-head,
+body.presentation-mode .viewport-frame-foot{display:none!important}
+body.presentation-mode .app-workspace{
+  position:fixed;inset:0;z-index:80;display:flex;padding:0;gap:0;
+  background:#e9ebee;pointer-events:none;
+}
+body.presentation-mode .viewport-frame{
+  position:absolute;inset:0;display:flex;border:0;border-radius:0;
+  box-shadow:none;background:#e9ebee;pointer-events:auto;
+}
+body.presentation-mode .viewport-stage{position:absolute;inset:0}
+body.presentation-mode #wallctl{left:14px;bottom:14px}
+body.presentation-mode .factory-minimap{right:14px;bottom:14px}
+body.presentation-mode .scene-tools{right:14px;top:14px}
+@media(max-width:760px){
+  .scene-tools{right:7px;top:7px;gap:4px}
+  .scene-tools button{min-height:27px;padding:0 7px;font-size:7px}
+  .factory-minimap{right:7px;bottom:44px;width:166px;padding:7px;border-radius:7px}
+  .minimap-heading span{font-size:6px}
+  .minimap-heading small{font-size:5px}
+  .minimap-zone{font-size:5px}
+  .minimap-foot{font-size:6px}
+  body.presentation-mode .factory-minimap{right:8px;bottom:8px}
+  body.presentation-mode .scene-tools{right:8px;top:8px}
+}
