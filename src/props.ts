@@ -738,7 +738,20 @@ export function buildCar(color = 0xd7262c): THREE.Group {
 export function buildTruck(): THREE.Group {
   const t = new THREE.Group();
   const red = std(0xd7262c, 0.5, 0.2), boxBody = std(0xeef2f8, 0.6), chassis = std(0x24303f, 0.6), tyre = std(0x15202e, 0.7), glass = std(0x7fa8d9, 0.2, 0.3);
-  t.add(b(2.5, 2.3, 4.2, boxBody, 0, 0.9, -0.6));
+  // Baú com interior aberto para que a operação de carga seja visível.
+  const cargoInterior = std(0x35404d, 0.92, 0);
+  t.add(
+    b(0.14, 2.18, 4.12, boxBody, -1.18, 0.96, -0.6),
+    b(0.14, 2.18, 4.12, boxBody, 1.18, 0.96, -0.6),
+    b(2.38, 0.14, 4.12, boxBody, 0, 3.06, -0.6),
+    b(2.36, 0.10, 4.02, cargoInterior, 0, 0.92, -0.6),
+    b(2.38, 2.12, 0.14, boxBody, 0, 0.98, 1.40),
+  );
+  // pequenas caixas visíveis no interior do baú, atrás do vão de carga
+  t.add(
+    b(0.72, 0.46, 0.62, std(0xc69a65, 0.9), -0.55, 1.05, -0.25),
+    b(0.72, 0.46, 0.62, std(0xd4ae7b, 0.9), 0.42, 1.05, -0.85),
+  );
   t.add(b(2.52, 0.2, 4.22, red, 0, 2.15, -0.6));
   // Portas traseiras articuladas; são abertas durante a carga da doca.
   const rearDoors = new THREE.Group();
