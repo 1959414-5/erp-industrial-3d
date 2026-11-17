@@ -62,7 +62,11 @@
         <span class="badge">conectando...</span>
         <span id="data-stamp" class="data-stamp"></span>
         <button id="focusbtn" class="topbar-btn" aria-pressed="false" title="Expandir a visualização 3D">Expandir 3D</button>
-        <button id="aibtn" aria-expanded="false" title="Perguntar à IA sobre os dados">Assistente IA</button>
+        <button id="aibtn" class="ai-launch" aria-expanded="false" title="Abrir assistente de IA e consultar alertas operacionais">
+          <span class="ai-launch-mark" aria-hidden="true">✦</span>
+          <span class="ai-launch-copy"><b>Assistente IA</b><small>Análise operacional</small></span>
+          <span id="ai-alert-count" class="ai-launch-count">Analisando</span>
+        </button>
       </div>
     </header>
 
